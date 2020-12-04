@@ -1,0 +1,68 @@
+
+<wsdl:definitions xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:ns1="https://siat.impuestos.gob.bo/" name="ServicioAutenticacionSoap" targetNamespace="https://siat.impuestos.gob.bo/">
+    <wsdl:types>
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tns="https://siat.impuestos.gob.bo/" elementFormDefault="unqualified" targetNamespace="https://siat.impuestos.gob.bo/" version="1.0">
+            <xs:element name="token" type="tns:token"/>
+            <xs:element name="tokenResponse" type="tns:tokenResponse"/>
+            <xs:complexType name="token">
+                <xs:sequence>
+                    <xs:element name="DatosUsuarioRequest" type="tns:DatosUsuarioRequest"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="DatosUsuarioRequest">
+                <xs:sequence>
+                    <xs:element minOccurs="0" name="client" type="xs:string"/>
+                    <xs:element minOccurs="0" name="ip" type="xs:string"/>
+                    <xs:element name="login" type="xs:string"/>
+                    <xs:element minOccurs="0" name="nit" type="xs:long"/>
+                    <xs:element name="password" type="xs:string"/>
+                    <xs:element minOccurs="0" name="tipoClienteId" type="xs:int"/>
+                    <xs:element minOccurs="0" name="tipoUsuarioId" type="xs:int"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="tokenResponse">
+                <xs:sequence>
+                    <xs:element minOccurs="0" name="UsuarioAutenticadoDto" type="tns:usuarioAutenticadoDto"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="usuarioAutenticadoDto">
+                <xs:complexContent>
+                    <xs:extension base="tns:listaMensajesAplicacion">
+                        <xs:sequence>
+                            <xs:element minOccurs="0" name="token" type="xs:string"/>
+                        </xs:sequence>
+                    </xs:extension>
+                </xs:complexContent>
+            </xs:complexType>
+            <xs:complexType name="listaMensajesAplicacion">
+                <xs:sequence>
+                    <xs:element maxOccurs="unbounded" minOccurs="0" name="mensajes" nillable="true" type="tns:strMensajeAplicacionDto"/>
+                    <xs:element name="ok" type="xs:boolean"/>
+                </xs:sequence>
+            </xs:complexType>
+            <xs:complexType name="strMensajeAplicacionDto">
+                <xs:sequence>
+                    <xs:element minOccurs="0" name="codigo" type="xs:int"/>
+                    <xs:element minOccurs="0" name="codigoRelacionado" type="xs:int"/>
+                    <xs:element minOccurs="0" name="descripcion" type="xs:string"/>
+                    <xs:element minOccurs="0" name="descripcionUi" type="xs:string"/>
+                    <xs:element minOccurs="0" name="estadoId" type="xs:string"/>
+                    <xs:element minOccurs="0" name="siglaSistema" type="xs:string"/>
+                    <xs:element minOccurs="0" name="tipoDestinoId" type="xs:int"/>
+                </xs:sequence>
+            </xs:complexType>
+        </xs:schema>
+    </wsdl:types>
+    <wsdl:message name="token">
+        <wsdl:part element="ns1:token" name="parameters"> </wsdl:part>
+    </wsdl:message>
+    <wsdl:message name="tokenResponse">
+        <wsdl:part element="ns1:tokenResponse" name="parameters"> </wsdl:part>
+    </wsdl:message>
+    <wsdl:portType name="ServicioAutenticacionSoap">
+        <wsdl:operation name="token">
+            <wsdl:input message="ns1:token" name="token"> </wsdl:input>
+            <wsdl:output message="ns1:tokenResponse" name="tokenResponse"> </wsdl:output>
+        </wsdl:operation>
+    </wsdl:portType>
+</wsdl:definitions>
