@@ -145,6 +145,24 @@ public class LoginController {
         }
     }
     @RequestMapping(value="/", method=RequestMethod.GET)
+    public int home() throws Exception {
+        int verificacion = 0;
+        verificarToken();
+        User user;
+        if(!userService.findUser().isEmpty()) {
+            user = userService.findUser().get(0);
+        }
+        else{
+            user=new User();
+            user.setPassword("Jmolina1");
+            user.setUsername("bap123");
+            userService.saveUser(user);
+        }
+        System.out.println(verificacion);
+        return verificacion;
+    }
+
+    @RequestMapping(value="/home", method=RequestMethod.GET)
     public int index(@RequestBody Map<String, Object> data) throws Exception {
         int verificacion = 0;
         verificarToken();
