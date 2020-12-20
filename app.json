@@ -1,0 +1,5 @@
+{
+  "name": "Factura",
+  "description": "Facturador Backend en Java",
+  "addons": [ "heroku-postgresql" ]
+}
