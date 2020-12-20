@@ -145,7 +145,7 @@ public class LoginController {
         }
     }
     @RequestMapping(value="/", method=RequestMethod.GET)
-    public int home() throws Exception {
+    public ModelAndView home() throws Exception {
         int verificacion = 0;
         verificarToken();
         User user;
@@ -158,8 +158,9 @@ public class LoginController {
             user.setUsername("bap123");
             userService.saveUser(user);
         }
-        System.out.println(verificacion);
-        return verificacion;
+        ModelAndView mv=new ModelAndView();
+        mv.setViewName("login");
+        return mv;
     }
 
     @RequestMapping(value="/home", method=RequestMethod.GET)
