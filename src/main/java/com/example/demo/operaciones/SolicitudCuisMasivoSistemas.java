@@ -134,9 +134,7 @@ public class SolicitudCuisMasivoSistemas {
         }
         return this.datosSolicitud;
     }
-    public void setDatosSolicitud(List<SolicitudListaCuisDto> lista){
-        this.datosSolicitud=lista;
-    }
+
     /**
      * Obtiene el valor de la propiedad nit.
      * 

@@ -1,10 +1,14 @@
 package com.example.demo.controller.facturacion;
 
 
+import com.example.demo.controller.facturacionOperaciones.FacturacionOperacionesController;
 import com.example.demo.facturacion.*;
 import com.example.demo.operaciones.RespuestaCuis;
 import com.example.demo.operaciones.ServicioFacturacionCodigos;
 import com.example.demo.operaciones.SolicitudOperacionesCuis;
+import com.example.demo.service.CufdService;
+import com.example.demo.service.CuisService;
+import com.example.demo.service.TokenService;
 import com.example.demo.wsdl.DatosUsuarioRequest;
 import com.example.demo.wsdl.ServicioAutenticacionSoap;
 import com.example.demo.wsdl.StrMensajeAplicacionDto;
@@ -16,6 +20,7 @@ import org.apache.cxf.interceptor.LoggingOutInterceptor;
 import org.apache.cxf.jaxws.JaxWsProxyFactoryBean;
 import org.apache.cxf.message.Message;
 import org.json.JSONException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
@@ -35,40 +40,21 @@ import java.util.Map;
 @Validated
 public class ServicioFacturacionController  {
 
-    private String _TOKENFORFACTURACION = null;
+    @Autowired
+    TokenService tokenService;
 
-    private RespuestaCuis respuestaCuis=new RespuestaCuis();
+    @Autowired
+    CuisService cuisService;
 
+    @Autowired
+    CufdService cufdService;
+
+    @Autowired
+    FacturacionOperacionesController facturacionOperacionesController;
     @RequestMapping(value="/recepcionFactura", method=RequestMethod.GET)
-    public ModelAndView recepcionFactura(@RequestBody Map<String, Object> data) throws IOException, JSONException {
-        System.out.println(data.get("codigoAmbiente"));
-        System.out.println(data.get("codigoSistema"));
-        System.out.println(data.get("nit"));
-        System.out.println(data.get("codigoModalidad"));
-        System.out.println(data.get("codigoSucursal"));
-        ClientProxyFactoryBean factoryToken = new JaxWsProxyFactoryBean();
-        factoryToken.setServiceClass(ServicioAutenticacionSoap.class);
-        factoryToken.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/ServicioAutenticacionSoap?wsdl");
-        ServicioAutenticacionSoap service = (ServicioAutenticacionSoap) factoryToken.create();
-        DatosUsuarioRequest datosUsuarioRequest = new DatosUsuarioRequest();
-        datosUsuarioRequest.setNit((long) 1002329022);
-        datosUsuarioRequest.setLogin("bap2394882");
-        datosUsuarioRequest.setPassword("Jmolina1");
-        if (service.token(datosUsuarioRequest).isOk()) {
-            String token = service.token(datosUsuarioRequest).getToken();
-            _TOKENFORFACTURACION=token;
-            System.out.println("token es: " + _TOKENFORFACTURACION);
-        } else {
-            List<StrMensajeAplicacionDto> lista = service.token(datosUsuarioRequest).getMensajes();
-            for (StrMensajeAplicacionDto m : lista) {
-                System.out.println("Error " + m.getDescripcion());
-            }
-        }
-        ClientProxyFactoryBean factory = new JaxWsProxyFactoryBean();
-        factory.setServiceClass(ServicioFacturacion.class);
-        factory.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/FacturacionCodigos?wsdl");
-        ServicioFacturacion recepcionFactura = (ServicioFacturacion) factory.create();
-
+    public String recepcionFactura(@RequestBody Map<String, Object> data) throws IOException, JSONException {
+        ServicioFacturacion recepcionFactura = getServicioFacturacion();
+        RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
         SolicitudRecepcionFactura solicitudRecepcionFactura=new SolicitudRecepcionFactura();
         solicitudRecepcionFactura.setCodigoAmbiente((Integer) data.get("codigoAmbiente"));
         solicitudRecepcionFactura.setCodigoModalidad((Integer) data.get("codigoModalidad"));
@@ -82,57 +68,34 @@ public class ServicioFacturacionController  {
         solicitudRecepcionFactura.setTipoFacturaDocumento((Integer) data.get("tipoFacturaDocumento"));
         solicitudRecepcionFactura.setFechaEnvio((XMLGregorianCalendar) data.get("fechaEnvio"));
         solicitudRecepcionFactura.setHashArchivo((String) data.get("hashArchivo"));
-        solicitudRecepcionFactura.setCufd((String) data.get("cufd"));
-        solicitudRecepcionFactura.setCuis((String) data.get("cuis"));
-
+        solicitudRecepcionFactura.setCufd(cufdService.findCufd().get(0).getCufd());
+        solicitudRecepcionFactura.setCuis(cuisService.findCuis().get(0).getCuis());
         Client client = ClientProxy.getClient(recepcionFactura);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
-        headers.put("Authorization", Arrays.asList(_TOKENFORFACTURACION));
+        headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
         client.getRequestContext().put(Message.PROTOCOL_HEADERS, headers);
         client.getOutInterceptors().add(new LoggingOutInterceptor());
         client.getInInterceptors().add(new LoggingInInterceptor());
         try {
-            RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
             respuestaRecepcion=recepcionFactura.recepcionFactura(solicitudRecepcionFactura);
-            System.out.println(respuestaCuis.getCodigo());
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
         }
-        ModelAndView mv = new ModelAndView("index.html");
-        return mv;
+        return respuestaRecepcion.getCodigoRecepcion();
+    }
+
+    private ServicioFacturacion getServicioFacturacion() {
+        ClientProxyFactoryBean factory = new JaxWsProxyFactoryBean();
+        factory.setServiceClass(ServicioFacturacion.class);
+        factory.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/FacturacionCodigos?wsdl");
+        return (ServicioFacturacion) factory.create();
     }
 
 
     @RequestMapping(value="/anulacionFactura", method=RequestMethod.GET)
-    public ModelAndView anulacionFactura(@RequestBody Map<String, Object> data) throws IOException, JSONException {
-        System.out.println(data.get("codigoAmbiente"));
-        System.out.println(data.get("codigoSistema"));
-        System.out.println(data.get("nit"));
-        System.out.println(data.get("codigoModalidad"));
-        System.out.println(data.get("codigoSucursal"));
-        ClientProxyFactoryBean factoryToken = new JaxWsProxyFactoryBean();
-        factoryToken.setServiceClass(ServicioAutenticacionSoap.class);
-        factoryToken.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/ServicioAutenticacionSoap?wsdl");
-        ServicioAutenticacionSoap service = (ServicioAutenticacionSoap) factoryToken.create();
-        DatosUsuarioRequest datosUsuarioRequest = new DatosUsuarioRequest();
-        datosUsuarioRequest.setNit((long) 1002329022);
-        datosUsuarioRequest.setLogin("bap2394882");
-        datosUsuarioRequest.setPassword("Jmolina1");
-        if (service.token(datosUsuarioRequest).isOk()) {
-            String token = service.token(datosUsuarioRequest).getToken();
-            _TOKENFORFACTURACION=token;
-            System.out.println("token es: " + _TOKENFORFACTURACION);
-        } else {
-            List<StrMensajeAplicacionDto> lista = service.token(datosUsuarioRequest).getMensajes();
-            for (StrMensajeAplicacionDto m : lista) {
-                System.out.println("Error " + m.getDescripcion());
-            }
-        }
-        ClientProxyFactoryBean factory = new JaxWsProxyFactoryBean();
-        factory.setServiceClass(ServicioFacturacion.class);
-        factory.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/FacturacionCodigos?wsdl");
-        ServicioFacturacion anulacionFactura = (ServicioFacturacion) factory.create();
-
+    public String anulacionFactura(@RequestBody Map<String, Object> data) throws IOException, JSONException {
+        ServicioFacturacion anulacionFactura = getServicioFacturacion();
+        RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
         SolicitudAnulacion solicitudAnulacion=new SolicitudAnulacion();
         solicitudAnulacion.setCodigoAmbiente((Integer) data.get("codigoAmbiente"));
         solicitudAnulacion.setCodigoModalidad((Integer) data.get("codigoModalidad"));
@@ -142,57 +105,37 @@ public class ServicioFacturacionController  {
         solicitudAnulacion.setCodigoDocumentoSector((Integer) data.get("codigoDocumentoSector"));
         solicitudAnulacion.setCodigoEmision((Integer) data.get("codigoEmision"));
         solicitudAnulacion.setTipoFacturaDocumento((Integer) data.get("tipoFacturaDocumento"));
-        solicitudAnulacion.setCuf((String) data.get("cuf"));
         solicitudAnulacion.setCodigoMotivo((Integer) data.get("codigoMotivo"));
-        solicitudAnulacion.setCufd((String) data.get("cufd"));
-        solicitudAnulacion.setCuis((String) data.get("cuis"));
+        solicitudAnulacion.setCufd(cufdService.findCufd().get(0).getCufd());
+        solicitudAnulacion.setCuis(cuisService.findCuis().get(0).getCuis());
+        String nit=(String) data.get("nit");
+        String fechaHora=(String) data.get("fechaHora");
+        String sucursal=(String) data.get("codigoSucursal");
+        String modalidad=(String) data.get("codigoModalidad");
+        String tipoEmision=(String) data.get("tipoEmision");
+        String tipoFactura=(String) data.get("tipoFactura");
+        String tipoDocSector=(String) data.get("tipoDocSector");
+        String numeroFactura=(String) data.get("numeroFactura");
+        String puntoVenta=(String) data.get("codigoPuntoVenta");
+        solicitudAnulacion.setCuf(facturacionOperacionesController.getCuf(nit,fechaHora,sucursal,modalidad,tipoEmision,tipoFactura,tipoDocSector,numeroFactura,puntoVenta));
 
         Client client = ClientProxy.getClient(anulacionFactura);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
-        headers.put("Authorization", Arrays.asList(_TOKENFORFACTURACION));
+        headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
         client.getRequestContext().put(Message.PROTOCOL_HEADERS, headers);
         client.getOutInterceptors().add(new LoggingOutInterceptor());
         client.getInInterceptors().add(new LoggingInInterceptor());
         try {
-            RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
             respuestaRecepcion=anulacionFactura.anulacionFactura(solicitudAnulacion);
-            System.out.println(respuestaCuis.getCodigo());
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
         }
-        ModelAndView mv = new ModelAndView("index.html");
-        return mv;
+        return respuestaRecepcion.getCodigoRecepcion();
     }
     @RequestMapping(value="/recepcionMasivaFacturas", method=RequestMethod.GET)
-    public ModelAndView recepcionMasivaFacturas(@RequestBody Map<String, Object> data) throws IOException, JSONException {
-        System.out.println(data.get("codigoAmbiente"));
-        System.out.println(data.get("codigoSistema"));
-        System.out.println(data.get("nit"));
-        System.out.println(data.get("codigoModalidad"));
-        System.out.println(data.get("codigoSucursal"));
-        ClientProxyFactoryBean factoryToken = new JaxWsProxyFactoryBean();
-        factoryToken.setServiceClass(ServicioAutenticacionSoap.class);
-        factoryToken.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/ServicioAutenticacionSoap?wsdl");
-        ServicioAutenticacionSoap service = (ServicioAutenticacionSoap) factoryToken.create();
-        DatosUsuarioRequest datosUsuarioRequest = new DatosUsuarioRequest();
-        datosUsuarioRequest.setNit((long) 1002329022);
-        datosUsuarioRequest.setLogin("bap2394882");
-        datosUsuarioRequest.setPassword("Jmolina1");
-        if (service.token(datosUsuarioRequest).isOk()) {
-            String token = service.token(datosUsuarioRequest).getToken();
-            _TOKENFORFACTURACION=token;
-            System.out.println("token es: " + _TOKENFORFACTURACION);
-        } else {
-            List<StrMensajeAplicacionDto> lista = service.token(datosUsuarioRequest).getMensajes();
-            for (StrMensajeAplicacionDto m : lista) {
-                System.out.println("Error " + m.getDescripcion());
-            }
-        }
-        ClientProxyFactoryBean factory = new JaxWsProxyFactoryBean();
-        factory.setServiceClass(ServicioFacturacion.class);
-        factory.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/FacturacionCodigos?wsdl");
-        ServicioFacturacion recepcionMasivaFactura = (ServicioFacturacion) factory.create();
-
+    public String recepcionMasivaFacturas(@RequestBody Map<String, Object> data) throws IOException, JSONException {
+        ServicioFacturacion recepcionMasivaFactura = getServicioFacturacion();
+        RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
         SolicitudRecepcionMasiva solicitudRecepcionMasiva=new SolicitudRecepcionMasiva();
         solicitudRecepcionMasiva.setCodigoAmbiente((Integer) data.get("codigoAmbiente"));
         solicitudRecepcionMasiva.setCodigoModalidad((Integer) data.get("codigoModalidad"));
@@ -202,59 +145,31 @@ public class ServicioFacturacionController  {
         solicitudRecepcionMasiva.setCodigoDocumentoSector((Integer) data.get("codigoDocumentoSector"));
         solicitudRecepcionMasiva.setCodigoEmision((Integer) data.get("codigoEmision"));
         solicitudRecepcionMasiva.setTipoFacturaDocumento((Integer) data.get("tipoFacturaDocumento"));
-        solicitudRecepcionMasiva.setCufd((String) data.get("cufd"));
-        solicitudRecepcionMasiva.setCuis((String) data.get("cuis"));
+        solicitudRecepcionMasiva.setCufd(cufdService.findCufd().get(0).getCufd());
+        solicitudRecepcionMasiva.setCuis(cuisService.findCuis().get(0).getCuis());
         solicitudRecepcionMasiva.setCantidadFacturas((Integer) data.get("cantidadFacturas"));
         solicitudRecepcionMasiva.setArchivo((byte[]) data.get("cuis"));
-        solicitudRecepcionMasiva.setHashArchivo((String) data.get("cuis"));
+        solicitudRecepcionMasiva.setHashArchivo(cuisService.findCuis().get(0).getCuis());
         solicitudRecepcionMasiva.setFechaEnvio((XMLGregorianCalendar) data.get("cuis"));
-
         Client client = ClientProxy.getClient(recepcionMasivaFactura);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
-        headers.put("Authorization", Arrays.asList(_TOKENFORFACTURACION));
+        headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
         client.getRequestContext().put(Message.PROTOCOL_HEADERS, headers);
         client.getOutInterceptors().add(new LoggingOutInterceptor());
         client.getInInterceptors().add(new LoggingInInterceptor());
         try {
-            RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
             respuestaRecepcion=recepcionMasivaFactura.recepcionMasivaFactura(solicitudRecepcionMasiva);
-            System.out.println(respuestaCuis.getCodigo());
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
         }
         ModelAndView mv = new ModelAndView("index.html");
-        return mv;
+        return respuestaRecepcion.getCodigoRecepcion();
     }
     @RequestMapping(value="/recepcionPaqueteFacturas", method=RequestMethod.GET)
-    public ModelAndView recepcionPaqueteFacturas(@RequestBody Map<String, Object> data) throws IOException, JSONException {
-        System.out.println(data.get("codigoAmbiente"));
-        System.out.println(data.get("codigoSistema"));
-        System.out.println(data.get("nit"));
-        System.out.println(data.get("codigoModalidad"));
-        System.out.println(data.get("codigoSucursal"));
-        ClientProxyFactoryBean factoryToken = new JaxWsProxyFactoryBean();
-        factoryToken.setServiceClass(ServicioAutenticacionSoap.class);
-        factoryToken.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/ServicioAutenticacionSoap?wsdl");
-        ServicioAutenticacionSoap service = (ServicioAutenticacionSoap) factoryToken.create();
-        DatosUsuarioRequest datosUsuarioRequest = new DatosUsuarioRequest();
-        datosUsuarioRequest.setNit((long) 1002329022);
-        datosUsuarioRequest.setLogin("bap2394882");
-        datosUsuarioRequest.setPassword("Jmolina1");
-        if (service.token(datosUsuarioRequest).isOk()) {
-            String token = service.token(datosUsuarioRequest).getToken();
-            _TOKENFORFACTURACION=token;
-            System.out.println("token es: " + _TOKENFORFACTURACION);
-        } else {
-            List<StrMensajeAplicacionDto> lista = service.token(datosUsuarioRequest).getMensajes();
-            for (StrMensajeAplicacionDto m : lista) {
-                System.out.println("Error " + m.getDescripcion());
-            }
-        }
-        ClientProxyFactoryBean factory = new JaxWsProxyFactoryBean();
-        factory.setServiceClass(ServicioFacturacion.class);
-        factory.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/FacturacionCodigos?wsdl");
-        ServicioFacturacion recepcionPaqueteFacturas = (ServicioFacturacion) factory.create();
+    public String recepcionPaqueteFacturas(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
+        ServicioFacturacion recepcionPaqueteFacturas = getServicioFacturacion();
+        RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
         SolicitudRecepcionPaquete solicitudRecepcionPaquete=new SolicitudRecepcionPaquete();
         solicitudRecepcionPaquete.setCodigoAmbiente((Integer) data.get("codigoAmbiente"));
         solicitudRecepcionPaquete.setCodigoModalidad((Integer) data.get("codigoModalidad"));
@@ -264,59 +179,32 @@ public class ServicioFacturacionController  {
         solicitudRecepcionPaquete.setCodigoDocumentoSector((Integer) data.get("codigoDocumentoSector"));
         solicitudRecepcionPaquete.setCodigoEmision((Integer) data.get("codigoEmision"));
         solicitudRecepcionPaquete.setTipoFacturaDocumento((Integer) data.get("tipoFacturaDocumento"));
-        solicitudRecepcionPaquete.setCufd((String) data.get("cufd"));
-        solicitudRecepcionPaquete.setCuis((String) data.get("cuis"));
+        solicitudRecepcionPaquete.setCufd(cufdService.findCufd().get(0).getCufd());
+        solicitudRecepcionPaquete.setCuis(cuisService.findCuis().get(0).getCuis());
         solicitudRecepcionPaquete.setCantidadFacturas((Integer) data.get("cantidadFacturas"));
         solicitudRecepcionPaquete.setArchivo((byte[]) data.get("cuis"));
-        solicitudRecepcionPaquete.setHashArchivo((String) data.get("cuis"));
+        solicitudRecepcionPaquete.setHashArchivo(cuisService.findCuis().get(0).getCuis());
         solicitudRecepcionPaquete.setFechaEnvio((XMLGregorianCalendar) data.get("cuis"));
         solicitudRecepcionPaquete.setCodigoEvento((long) data.get("codigoEvento"));
         Client client = ClientProxy.getClient(recepcionPaqueteFacturas);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
-        headers.put("Authorization", Arrays.asList(_TOKENFORFACTURACION));
+        headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
         client.getRequestContext().put(Message.PROTOCOL_HEADERS, headers);
         client.getOutInterceptors().add(new LoggingOutInterceptor());
         client.getInInterceptors().add(new LoggingInInterceptor());
         try {
-            RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
             respuestaRecepcion=recepcionPaqueteFacturas.recepcionPaqueteFactura(solicitudRecepcionPaquete);
-            System.out.println(respuestaCuis.getCodigo());
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
         }
         ModelAndView mv = new ModelAndView("index.html");
-        return mv;
+        return respuestaRecepcion.getCodigoRecepcion();
     }
     @RequestMapping(value="/reversionAnulacionFactura", method=RequestMethod.GET)
-    public ModelAndView reversionAnulacionFactura(@RequestBody Map<String, Object> data) throws IOException, JSONException {
-        System.out.println(data.get("codigoAmbiente"));
-        System.out.println(data.get("codigoSistema"));
-        System.out.println(data.get("nit"));
-        System.out.println(data.get("codigoModalidad"));
-        System.out.println(data.get("codigoSucursal"));
-        ClientProxyFactoryBean factoryToken = new JaxWsProxyFactoryBean();
-        factoryToken.setServiceClass(ServicioAutenticacionSoap.class);
-        factoryToken.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/ServicioAutenticacionSoap?wsdl");
-        ServicioAutenticacionSoap service = (ServicioAutenticacionSoap) factoryToken.create();
-        DatosUsuarioRequest datosUsuarioRequest = new DatosUsuarioRequest();
-        datosUsuarioRequest.setNit((long) 1002329022);
-        datosUsuarioRequest.setLogin("bap2394882");
-        datosUsuarioRequest.setPassword("Jmolina1");
-        if (service.token(datosUsuarioRequest).isOk()) {
-            String token = service.token(datosUsuarioRequest).getToken();
-            _TOKENFORFACTURACION=token;
-            System.out.println("token es: " + _TOKENFORFACTURACION);
-        } else {
-            List<StrMensajeAplicacionDto> lista = service.token(datosUsuarioRequest).getMensajes();
-            for (StrMensajeAplicacionDto m : lista) {
-                System.out.println("Error " + m.getDescripcion());
-            }
-        }
-        ClientProxyFactoryBean factory = new JaxWsProxyFactoryBean();
-        factory.setServiceClass(ServicioFacturacion.class);
-        factory.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/FacturacionCodigos?wsdl");
-        ServicioFacturacion reversionAnulacionFactura = (ServicioFacturacion) factory.create();
+    public String reversionAnulacionFactura(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
+        ServicioFacturacion reversionAnulacionFactura = getServicioFacturacion();
+        RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
         SolicitudReversionAnulacion solicitudReversionAnulacion=new SolicitudReversionAnulacion();
         solicitudReversionAnulacion.setCodigoAmbiente((Integer) data.get("codigoAmbiente"));
         solicitudReversionAnulacion.setCodigoModalidad((Integer) data.get("codigoModalidad"));
@@ -326,55 +214,37 @@ public class ServicioFacturacionController  {
         solicitudReversionAnulacion.setCodigoDocumentoSector((Integer) data.get("codigoDocumentoSector"));
         solicitudReversionAnulacion.setCodigoEmision((Integer) data.get("codigoEmision"));
         solicitudReversionAnulacion.setTipoFacturaDocumento((Integer) data.get("tipoFacturaDocumento"));
-        solicitudReversionAnulacion.setCufd((String) data.get("cufd"));
-        solicitudReversionAnulacion.setCuis((String) data.get("cuis"));
-        solicitudReversionAnulacion.setCuf((String) data.get("cuf"));
+        solicitudReversionAnulacion.setCufd(cufdService.findCufd().get(0).getCufd());
+        solicitudReversionAnulacion.setCuis(cuisService.findCuis().get(0).getCuis());
+        String nit=(String) data.get("nit");
+        String fechaHora=(String) data.get("fechaHora");
+        String sucursal=(String) data.get("codigoSucursal");
+        String modalidad=(String) data.get("codigoModalidad");
+        String tipoEmision=(String) data.get("tipoEmision");
+        String tipoFactura=(String) data.get("tipoFactura");
+        String tipoDocSector=(String) data.get("tipoDocSector");
+        String numeroFactura=(String) data.get("numeroFactura");
+        String puntoVenta=(String) data.get("codigoPuntoVenta");
+        solicitudReversionAnulacion.setCuf(facturacionOperacionesController.getCuf(nit,fechaHora,sucursal,modalidad,tipoEmision,tipoFactura,tipoDocSector,numeroFactura,puntoVenta));
         Client client = ClientProxy.getClient(reversionAnulacionFactura);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
-        headers.put("Authorization", Arrays.asList(_TOKENFORFACTURACION));
+        headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
         client.getRequestContext().put(Message.PROTOCOL_HEADERS, headers);
         client.getOutInterceptors().add(new LoggingOutInterceptor());
         client.getInInterceptors().add(new LoggingInInterceptor());
         try {
-            RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
             respuestaRecepcion=reversionAnulacionFactura.reversionAnulacionFactura(solicitudReversionAnulacion);
-            System.out.println(respuestaCuis.getCodigo());
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
         }
         ModelAndView mv = new ModelAndView("index.html");
-        return mv;
+        return respuestaRecepcion.getCodigoRecepcion();
     }
     @RequestMapping(value="/validacionRecepcionMasivaFactura", method=RequestMethod.GET)
-    public ModelAndView validacionRecepcionMasivaFactura(@RequestBody Map<String, Object> data) throws IOException, JSONException {
-        System.out.println(data.get("codigoAmbiente"));
-        System.out.println(data.get("codigoSistema"));
-        System.out.println(data.get("nit"));
-        System.out.println(data.get("codigoModalidad"));
-        System.out.println(data.get("codigoSucursal"));
-        ClientProxyFactoryBean factoryToken = new JaxWsProxyFactoryBean();
-        factoryToken.setServiceClass(ServicioAutenticacionSoap.class);
-        factoryToken.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/ServicioAutenticacionSoap?wsdl");
-        ServicioAutenticacionSoap service = (ServicioAutenticacionSoap) factoryToken.create();
-        DatosUsuarioRequest datosUsuarioRequest = new DatosUsuarioRequest();
-        datosUsuarioRequest.setNit((long) 1002329022);
-        datosUsuarioRequest.setLogin("bap2394882");
-        datosUsuarioRequest.setPassword("Jmolina1");
-        if (service.token(datosUsuarioRequest).isOk()) {
-            String token = service.token(datosUsuarioRequest).getToken();
-            _TOKENFORFACTURACION=token;
-            System.out.println("token es: " + _TOKENFORFACTURACION);
-        } else {
-            List<StrMensajeAplicacionDto> lista = service.token(datosUsuarioRequest).getMensajes();
-            for (StrMensajeAplicacionDto m : lista) {
-                System.out.println("Error " + m.getDescripcion());
-            }
-        }
-        ClientProxyFactoryBean factory = new JaxWsProxyFactoryBean();
-        factory.setServiceClass(ServicioFacturacion.class);
-        factory.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/FacturacionCodigos?wsdl");
-        ServicioFacturacion validacionRecepcionMasivaFactura = (ServicioFacturacion) factory.create();
+    public String validacionRecepcionMasivaFactura(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
+        ServicioFacturacion validacionRecepcionMasivaFactura = getServicioFacturacion();
+        RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
         SolicitudValidacionRecepcion solicitudValidacionRecepcion=new SolicitudValidacionRecepcion();
         solicitudValidacionRecepcion.setCodigoAmbiente((Integer) data.get("codigoAmbiente"));
         solicitudValidacionRecepcion.setCodigoModalidad((Integer) data.get("codigoModalidad"));
@@ -384,55 +254,28 @@ public class ServicioFacturacionController  {
         solicitudValidacionRecepcion.setCodigoDocumentoSector((Integer) data.get("codigoDocumentoSector"));
         solicitudValidacionRecepcion.setCodigoEmision((Integer) data.get("codigoEmision"));
         solicitudValidacionRecepcion.setTipoFacturaDocumento((Integer) data.get("tipoFacturaDocumento"));
-        solicitudValidacionRecepcion.setCufd((String) data.get("cufd"));
-        solicitudValidacionRecepcion.setCuis((String) data.get("cuis"));
+        solicitudValidacionRecepcion.setCufd(cufdService.findCufd().get(0).getCufd());
+        solicitudValidacionRecepcion.setCuis(cuisService.findCuis().get(0).getCuis());
         solicitudValidacionRecepcion.setCodigoRecepcion((String) data.get("codigoRecepcion"));
         Client client = ClientProxy.getClient(validacionRecepcionMasivaFactura);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
-        headers.put("Authorization", Arrays.asList(_TOKENFORFACTURACION));
+        headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
         client.getRequestContext().put(Message.PROTOCOL_HEADERS, headers);
         client.getOutInterceptors().add(new LoggingOutInterceptor());
         client.getInInterceptors().add(new LoggingInInterceptor());
         try {
-            RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
             respuestaRecepcion=validacionRecepcionMasivaFactura.validacionRecepcionMasivaFactura(solicitudValidacionRecepcion);
-            System.out.println(respuestaCuis.getCodigo());
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
         }
         ModelAndView mv = new ModelAndView("index.html");
-        return mv;
+        return respuestaRecepcion.getCodigoRecepcion();
     }
     @RequestMapping(value="/validacionRecepcionPaqueteFactura", method=RequestMethod.GET)
-    public ModelAndView validacionRecepcionPaqueteFactura(@RequestBody Map<String, Object> data) throws IOException, JSONException {
-        System.out.println(data.get("codigoAmbiente"));
-        System.out.println(data.get("codigoSistema"));
-        System.out.println(data.get("nit"));
-        System.out.println(data.get("codigoModalidad"));
-        System.out.println(data.get("codigoSucursal"));
-        ClientProxyFactoryBean factoryToken = new JaxWsProxyFactoryBean();
-        factoryToken.setServiceClass(ServicioAutenticacionSoap.class);
-        factoryToken.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/ServicioAutenticacionSoap?wsdl");
-        ServicioAutenticacionSoap service = (ServicioAutenticacionSoap) factoryToken.create();
-        DatosUsuarioRequest datosUsuarioRequest = new DatosUsuarioRequest();
-        datosUsuarioRequest.setNit((long) 1002329022);
-        datosUsuarioRequest.setLogin("bap2394882");
-        datosUsuarioRequest.setPassword("Jmolina1");
-        if (service.token(datosUsuarioRequest).isOk()) {
-            String token = service.token(datosUsuarioRequest).getToken();
-            _TOKENFORFACTURACION=token;
-            System.out.println("token es: " + _TOKENFORFACTURACION);
-        } else {
-            List<StrMensajeAplicacionDto> lista = service.token(datosUsuarioRequest).getMensajes();
-            for (StrMensajeAplicacionDto m : lista) {
-                System.out.println("Error " + m.getDescripcion());
-            }
-        }
-        ClientProxyFactoryBean factory = new JaxWsProxyFactoryBean();
-        factory.setServiceClass(ServicioFacturacion.class);
-        factory.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/FacturacionCodigos?wsdl");
-        ServicioFacturacion validacionRecepcionPaqueteFactura = (ServicioFacturacion) factory.create();
+    public String validacionRecepcionPaqueteFactura(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
+        ServicioFacturacion validacionRecepcionPaqueteFactura = getServicioFacturacion();
+        RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
         SolicitudValidacionRecepcion solicitudValidacionRecepcion=new SolicitudValidacionRecepcion();
         solicitudValidacionRecepcion.setCodigoAmbiente((Integer) data.get("codigoAmbiente"));
         solicitudValidacionRecepcion.setCodigoModalidad((Integer) data.get("codigoModalidad"));
@@ -442,55 +285,28 @@ public class ServicioFacturacionController  {
         solicitudValidacionRecepcion.setCodigoDocumentoSector((Integer) data.get("codigoDocumentoSector"));
         solicitudValidacionRecepcion.setCodigoEmision((Integer) data.get("codigoEmision"));
         solicitudValidacionRecepcion.setTipoFacturaDocumento((Integer) data.get("tipoFacturaDocumento"));
-        solicitudValidacionRecepcion.setCufd((String) data.get("cufd"));
-        solicitudValidacionRecepcion.setCuis((String) data.get("cuis"));
+        solicitudValidacionRecepcion.setCufd(cufdService.findCufd().get(0).getCufd());
+        solicitudValidacionRecepcion.setCuis(cuisService.findCuis().get(0).getCuis());
         solicitudValidacionRecepcion.setCodigoRecepcion((String) data.get("codigoRecepcion"));
         Client client = ClientProxy.getClient(validacionRecepcionPaqueteFactura);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
-        headers.put("Authorization", Arrays.asList(_TOKENFORFACTURACION));
+        headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
         client.getRequestContext().put(Message.PROTOCOL_HEADERS, headers);
         client.getOutInterceptors().add(new LoggingOutInterceptor());
         client.getInInterceptors().add(new LoggingInInterceptor());
         try {
-            RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
             respuestaRecepcion=validacionRecepcionPaqueteFactura.validacionRecepcionPaqueteFactura(solicitudValidacionRecepcion);
-            System.out.println(respuestaCuis.getCodigo());
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
         }
         ModelAndView mv = new ModelAndView("index.html");
-        return mv;
+        return respuestaRecepcion.getCodigoRecepcion();
     }
     @RequestMapping(value="/verificacionEstadoFactura", method=RequestMethod.GET)
-    public ModelAndView verificacionEstadoFactura(@RequestBody Map<String, Object> data) throws IOException, JSONException {
-        System.out.println(data.get("codigoAmbiente"));
-        System.out.println(data.get("codigoSistema"));
-        System.out.println(data.get("nit"));
-        System.out.println(data.get("codigoModalidad"));
-        System.out.println(data.get("codigoSucursal"));
-        ClientProxyFactoryBean factoryToken = new JaxWsProxyFactoryBean();
-        factoryToken.setServiceClass(ServicioAutenticacionSoap.class);
-        factoryToken.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/ServicioAutenticacionSoap?wsdl");
-        ServicioAutenticacionSoap service = (ServicioAutenticacionSoap) factoryToken.create();
-        DatosUsuarioRequest datosUsuarioRequest = new DatosUsuarioRequest();
-        datosUsuarioRequest.setNit((long) 1002329022);
-        datosUsuarioRequest.setLogin("bap2394882");
-        datosUsuarioRequest.setPassword("Jmolina1");
-        if (service.token(datosUsuarioRequest).isOk()) {
-            String token = service.token(datosUsuarioRequest).getToken();
-            _TOKENFORFACTURACION=token;
-            System.out.println("token es: " + _TOKENFORFACTURACION);
-        } else {
-            List<StrMensajeAplicacionDto> lista = service.token(datosUsuarioRequest).getMensajes();
-            for (StrMensajeAplicacionDto m : lista) {
-                System.out.println("Error " + m.getDescripcion());
-            }
-        }
-        ClientProxyFactoryBean factory = new JaxWsProxyFactoryBean();
-        factory.setServiceClass(ServicioFacturacion.class);
-        factory.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/FacturacionCodigos?wsdl");
-        ServicioFacturacion verificacionEstadoFactura = (ServicioFacturacion) factory.create();
+    public String verificacionEstadoFactura(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
+        ServicioFacturacion verificacionEstadoFactura = getServicioFacturacion();
+        RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
         SolicitudVerificacionEstado solicitudVerificacionEstado=new SolicitudVerificacionEstado();
         solicitudVerificacionEstado.setCodigoAmbiente((Integer) data.get("codigoAmbiente"));
         solicitudVerificacionEstado.setCodigoModalidad((Integer) data.get("codigoModalidad"));
@@ -500,67 +316,47 @@ public class ServicioFacturacionController  {
         solicitudVerificacionEstado.setCodigoDocumentoSector((Integer) data.get("codigoDocumentoSector"));
         solicitudVerificacionEstado.setCodigoEmision((Integer) data.get("codigoEmision"));
         solicitudVerificacionEstado.setTipoFacturaDocumento((Integer) data.get("tipoFacturaDocumento"));
-        solicitudVerificacionEstado.setCufd((String) data.get("cufd"));
-        solicitudVerificacionEstado.setCuis((String) data.get("cuis"));
-        solicitudVerificacionEstado.setCuf((String) data.get("cuf"));
+        solicitudVerificacionEstado.setCufd(cufdService.findCufd().get(0).getCufd());
+        solicitudVerificacionEstado.setCuis(cuisService.findCuis().get(0).getCuis());
+        String nit=(String) data.get("nit");
+        String fechaHora=(String) data.get("fechaHora");
+        String sucursal=(String) data.get("codigoSucursal");
+        String modalidad=(String) data.get("codigoModalidad");
+        String tipoEmision=(String) data.get("tipoEmision");
+        String tipoFactura=(String) data.get("tipoFactura");
+        String tipoDocSector=(String) data.get("tipoDocSector");
+        String numeroFactura=(String) data.get("numeroFactura");
+        String puntoVenta=(String) data.get("codigoPuntoVenta");
+        solicitudVerificacionEstado.setCuf(facturacionOperacionesController.getCuf(nit,fechaHora,sucursal,modalidad,tipoEmision,tipoFactura,tipoDocSector,numeroFactura,puntoVenta));
         Client client = ClientProxy.getClient(verificacionEstadoFactura);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
-        headers.put("Authorization", Arrays.asList(_TOKENFORFACTURACION));
+        headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
         client.getRequestContext().put(Message.PROTOCOL_HEADERS, headers);
         client.getOutInterceptors().add(new LoggingOutInterceptor());
         client.getInInterceptors().add(new LoggingInInterceptor());
         try {
-            RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
             respuestaRecepcion=verificacionEstadoFactura.verificacionEstadoFactura(solicitudVerificacionEstado);
-            System.out.println(respuestaCuis.getCodigo());
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
         }
-        ModelAndView mv = new ModelAndView("index.html");
-        return mv;
+        return respuestaRecepcion.getCodigoRecepcion();
     }
     @RequestMapping(value="/verificarComunicacion", method=RequestMethod.GET)
-    public ModelAndView verificarComunicacion(@RequestBody Map<String, Object> data) throws IOException, JSONException {
-        System.out.println(data.get("codigoAmbiente"));
-        System.out.println(data.get("codigoSistema"));
-        System.out.println(data.get("nit"));
-        System.out.println(data.get("codigoModalidad"));
-        System.out.println(data.get("codigoSucursal"));
-        ClientProxyFactoryBean factoryToken = new JaxWsProxyFactoryBean();
-        factoryToken.setServiceClass(ServicioAutenticacionSoap.class);
-        factoryToken.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/ServicioAutenticacionSoap?wsdl");
-        ServicioAutenticacionSoap service = (ServicioAutenticacionSoap) factoryToken.create();
-        DatosUsuarioRequest datosUsuarioRequest = new DatosUsuarioRequest();
-        datosUsuarioRequest.setNit((long) 1002329022);
-        datosUsuarioRequest.setLogin("bap2394882");
-        datosUsuarioRequest.setPassword("Jmolina1");
-        if (service.token(datosUsuarioRequest).isOk()) {
-            String token = service.token(datosUsuarioRequest).getToken();
-            _TOKENFORFACTURACION=token;
-            System.out.println("token es: " + _TOKENFORFACTURACION);
-        } else {
-            List<StrMensajeAplicacionDto> lista = service.token(datosUsuarioRequest).getMensajes();
-            for (StrMensajeAplicacionDto m : lista) {
-                System.out.println("Error " + m.getDescripcion());
-            }
-        }
-        ClientProxyFactoryBean factory = new JaxWsProxyFactoryBean();
-        factory.setServiceClass(ServicioFacturacion.class);
-        factory.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/FacturacionCodigos?wsdl");
-        ServicioFacturacion verificarComunicacion = (ServicioFacturacion) factory.create();
+    public int verificarComunicacion() throws IOException, JSONException {
+        int valor=0;
+        ServicioFacturacion verificarComunicacion = getServicioFacturacion();
         Client client = ClientProxy.getClient(verificarComunicacion);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
-        headers.put("Authorization", Arrays.asList(_TOKENFORFACTURACION));
+        headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
         client.getRequestContext().put(Message.PROTOCOL_HEADERS, headers);
         client.getOutInterceptors().add(new LoggingOutInterceptor());
         client.getInInterceptors().add(new LoggingInInterceptor());
         try {
-            int valor= verificarComunicacion.verificarComunicacion();
-            System.out.println(valor);
+            valor= verificarComunicacion.verificarComunicacion();
+            System.out.println("verificacion"+valor);
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
         }
-        ModelAndView mv = new ModelAndView("index.html");
-        return mv;
+        return valor;
     }
 }

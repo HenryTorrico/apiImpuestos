@@ -6,13 +6,16 @@
 package com.example.demo.controller.adm;
 
 
+import com.example.demo.model.TokenModel;
 import com.example.demo.operaciones.ServicioFacturacionCodigos;
 
 import java.io.IOException;
 
+import java.sql.Timestamp;
 import java.util.*;
 
 import com.example.demo.operaciones.VerificarComunicacionResponse;
+import com.example.demo.service.TokenService;
 import com.example.demo.wsdl.*;
 import org.apache.cxf.endpoint.Client;
 import org.apache.cxf.frontend.ClientProxy;
@@ -23,6 +26,7 @@ import org.apache.cxf.jaxws.JaxWsProxyFactoryBean;
 import org.apache.cxf.message.Message;
 
 import org.json.JSONException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -37,66 +41,66 @@ import org.springframework.web.servlet.ModelAndView;
 @Validated
 public class AdmUsuarioController {
 
-    private String _TOKENFORFACTURACION = null;
+    @Autowired
+    TokenService tokenService;
+
+
+    private int ver=0;
 
     @RequestMapping(value="/authenticate", method= RequestMethod.GET)
-    public ModelAndView index(@RequestBody Map<String, Object> data) throws IOException, JSONException {
-        System.out.println(data.get("login"));
-        System.out.println(data.get("nit"));
-        System.out.println(data.get("password"));
-
-        ClientProxyFactoryBean factoryToken = new JaxWsProxyFactoryBean();
-        factoryToken.setServiceClass(ServicioAutenticacionSoap.class);
-        factoryToken.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/ServicioAutenticacionSoap?wsdl");
-        ServicioAutenticacionSoap service = (ServicioAutenticacionSoap) factoryToken.create();
-        DatosUsuarioRequest datosUsuarioRequest = new DatosUsuarioRequest();
-        datosUsuarioRequest.setNit(((Number)data.get("nit")).longValue());
-        datosUsuarioRequest.setLogin(data.get("login").toString());
-        datosUsuarioRequest.setPassword(data.get("password").toString());
-        service.token(datosUsuarioRequest);
-        UsuarioAutenticadoDto usuarioAutenticadoDto=new UsuarioAutenticadoDto();
-        usuarioAutenticadoDto.setToken(service.token(datosUsuarioRequest).getToken());
-        System.out.println("token fuera: "+usuarioAutenticadoDto.getToken());
-        if (service.token(datosUsuarioRequest).isOk()) {
-            String token = service.token(datosUsuarioRequest).getToken();
-            _TOKENFORFACTURACION=token;
-            System.out.println("token dentro: " + _TOKENFORFACTURACION);
-        } else {
-            List<StrMensajeAplicacionDto> lista = service.token(datosUsuarioRequest).getMensajes();
-            for (StrMensajeAplicacionDto m : lista) {
-                System.out.println("Error: " + m.getDescripcion());
+    public String index(@RequestBody Map<String, Object> data) throws Exception {
+        if(!tokenService.findToken().isEmpty()) {
+            TokenModel tokenModel=tokenService.findToken().get(0);
+            long fourHours = 4 * 60 * 60 * 1000L;
+            Date date = new Date();
+            long time = date.getTime();
+            Timestamp ts = new Timestamp(time);
+            if ((tokenModel.getDateCreated().getTime() - ts.getTime()) > fourHours) {
+                ClientProxyFactoryBean factoryToken = new JaxWsProxyFactoryBean();
+                factoryToken.setServiceClass(ServicioAutenticacionSoap.class);
+                factoryToken.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/ServicioAutenticacionSoap?wsdl");
+                ServicioAutenticacionSoap service = (ServicioAutenticacionSoap) factoryToken.create();
+                DatosUsuarioRequest datosUsuarioRequest = new DatosUsuarioRequest();
+                datosUsuarioRequest.setNit((long) data.get("nit"));
+                datosUsuarioRequest.setLogin((String) data.get("login"));
+                datosUsuarioRequest.setPassword((String) data.get("password"));
+                if (service.token(datosUsuarioRequest).isOk()) {
+                    tokenModel.setTokenUsuario(service.token(datosUsuarioRequest).getToken());
+                    tokenService.updateToken(tokenModel);
+                } else {
+                    List<StrMensajeAplicacionDto> lista = service.token(datosUsuarioRequest).getMensajes();
+                    for (StrMensajeAplicacionDto m : lista) {
+                        System.out.println("Error: " + m.getDescripcion());
+                    }
+                }
             }
         }
-        ClientProxyFactoryBean factory = new JaxWsProxyFactoryBean();
-        factory.setServiceClass(ServicioFacturacionCodigos.class);
-        factory.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/FacturacionCodigos?wsdl");
-        ServicioFacturacionCodigos serviceFacturacion = (ServicioFacturacionCodigos) factory.create();
-        Client client = ClientProxy.getClient(serviceFacturacion);
-        Map<String, List<String>> headers = new HashMap<String, List<String>>();
-        headers.put("Authorization", Arrays.asList(_TOKENFORFACTURACION));
-        client.getRequestContext().put(Message.PROTOCOL_HEADERS, headers);
-        client.getOutInterceptors().add(new LoggingOutInterceptor());
-        client.getInInterceptors().add(new LoggingInInterceptor());
-
-        try {
-            VerificarComunicacionResponse verificarComunicacionResponse=new VerificarComunicacionResponse();
-            verificarComunicacionResponse.setReturn(serviceFacturacion.verificarComunicacion().intValue());
-            System.out.println(verificarComunicacionResponse.getReturn());
-		    System.out.println("funca");
-		} catch (Exception e) {
-			System.out.println("Error: " + e.getMessage());
-		}
-    ModelAndView mv = new ModelAndView("index.html");
-        return mv;
-    }
-    /*@GetMapping("/getParametros/{login}")
-    public ResponseEntity<ConsultaParametros> getParametros(@PathVariable("login") String login) {
-        ConsultaParametros obj = admUsuarioService.consultaParametros(login);
-        if (obj == null) {
-            throw new ModelNotFoundException("NO ENCONTRADO: " + login);
+        else{
+            Date date= new Date();
+            long time = date.getTime();
+            Timestamp ts = new Timestamp(time);
+            TokenModel newToken=new TokenModel();
+            ClientProxyFactoryBean factoryToken = new JaxWsProxyFactoryBean();
+            factoryToken.setServiceClass(ServicioAutenticacionSoap.class);
+            factoryToken.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/ServicioAutenticacionSoap?wsdl");
+            ServicioAutenticacionSoap service = (ServicioAutenticacionSoap) factoryToken.create();
+            DatosUsuarioRequest datosUsuarioRequest = new DatosUsuarioRequest();
+            datosUsuarioRequest.setNit((long) data.get("nit"));
+            datosUsuarioRequest.setLogin((String) data.get("login"));
+            datosUsuarioRequest.setPassword((String) data.get("password"));
+            if (service.token(datosUsuarioRequest).isOk()) {
+                newToken.setDateCreated(ts);
+                newToken.setTokenUsuario(service.token(datosUsuarioRequest).getToken());
+                tokenService.saveToken(newToken);
+            } else {
+                List<StrMensajeAplicacionDto> lista = service.token(datosUsuarioRequest).getMensajes();
+                for (StrMensajeAplicacionDto m : lista) {
+                    System.out.println("Error: " + m.getDescripcion());
+                }
+            }
         }
+        return tokenService.findToken().get(0).getTokenUsuario();
+    }
 
-        return new ResponseEntity<ConsultaParametros>(obj, HttpStatus.OK);
-    }*/
 
 }

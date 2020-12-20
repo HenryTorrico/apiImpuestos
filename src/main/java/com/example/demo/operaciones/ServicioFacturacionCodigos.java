@@ -27,12 +27,12 @@ public interface ServicioFacturacionCodigos {
      * 
      * @param solicitudOperacionesCuis
      * @return
-     *     returns com.example.demo.facturacion.RespuestaCuis
+     *     returns com.example.demo.operaciones.RespuestaCuis
      */
     @WebMethod
     @WebResult(name = "RespuestaCuis", targetNamespace = "")
-    @RequestWrapper(localName = "solicitudCuis", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.facturacion.SolicitudCuis")
-    @ResponseWrapper(localName = "solicitudCuisResponse", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.facturacion.SolicitudCuisResponse")
+    @RequestWrapper(localName = "solicitudCuis", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.operaciones.SolicitudCuis")
+    @ResponseWrapper(localName = "solicitudCuisResponse", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.operaciones.SolicitudCuisResponse")
     public RespuestaCuis solicitudCuis(
         @WebParam(name = "SolicitudOperacionesCuis", targetNamespace = "")
         SolicitudOperacionesCuis solicitudOperacionesCuis);
@@ -44,20 +44,20 @@ public interface ServicioFacturacionCodigos {
      */
     @WebMethod
     @WebResult(targetNamespace = "")
-    @RequestWrapper(localName = "verificarComunicacion", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.facturacion.VerificarComunicacion")
-    @ResponseWrapper(localName = "verificarComunicacionResponse", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.facturacion.VerificarComunicacionResponse")
+    @RequestWrapper(localName = "verificarComunicacion", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.operaciones.VerificarComunicacion")
+    @ResponseWrapper(localName = "verificarComunicacionResponse", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.operaciones.VerificarComunicacionResponse")
     public Integer verificarComunicacion();
 
     /**
      * 
      * @param solicitudCuisMasivoSistemas
      * @return
-     *     returns com.example.demo.facturacion.RespuestaCuisMasivo
+     *     returns com.example.demo.operaciones.RespuestaCuisMasivo
      */
     @WebMethod
     @WebResult(name = "RespuestaCuisMasivo", targetNamespace = "")
-    @RequestWrapper(localName = "solicitudCuisMasivo", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.facturacion.SolicitudCuisMasivo")
-    @ResponseWrapper(localName = "solicitudCuisMasivoResponse", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.facturacion.SolicitudCuisMasivoResponse")
+    @RequestWrapper(localName = "solicitudCuisMasivo", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.operaciones.SolicitudCuisMasivo")
+    @ResponseWrapper(localName = "solicitudCuisMasivoResponse", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.operaciones.SolicitudCuisMasivoResponse")
     public RespuestaCuisMasivo solicitudCuisMasivo(
         @WebParam(name = "SolicitudCuisMasivoSistemas", targetNamespace = "")
         SolicitudCuisMasivoSistemas solicitudCuisMasivoSistemas);
@@ -66,12 +66,12 @@ public interface ServicioFacturacionCodigos {
      * 
      * @param solicitudOperaciones
      * @return
-     *     returns com.example.demo.facturacion.RespuestaCufd
+     *     returns com.example.demo.operaciones.RespuestaCufd
      */
     @WebMethod
     @WebResult(name = "RespuestaCufd", targetNamespace = "")
-    @RequestWrapper(localName = "solicitudCufd", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.facturacion.SolicitudCufd")
-    @ResponseWrapper(localName = "solicitudCufdResponse", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.facturacion.SolicitudCufdResponse")
+    @RequestWrapper(localName = "solicitudCufd", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.operaciones.SolicitudCufd")
+    @ResponseWrapper(localName = "solicitudCufdResponse", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.operaciones.SolicitudCufdResponse")
     public RespuestaCufd solicitudCufd(
         @WebParam(name = "SolicitudOperaciones", targetNamespace = "")
         SolicitudOperacionesCufd solicitudOperaciones);
@@ -80,12 +80,12 @@ public interface ServicioFacturacionCodigos {
      * 
      * @param solicitudMasivo
      * @return
-     *     returns com.example.demo.facturacion.RespuestaCufdMasivo
+     *     returns com.example.demo.operaciones.RespuestaCufdMasivo
      */
     @WebMethod
     @WebResult(name = "RespuestaCufdMasivo", targetNamespace = "")
-    @RequestWrapper(localName = "solicitudCufdMasivo", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.facturacion.SolicitudCufdMasivo")
-    @ResponseWrapper(localName = "solicitudCufdMasivoResponse", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.facturacion.SolicitudCufdMasivoResponse")
+    @RequestWrapper(localName = "solicitudCufdMasivo", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.operaciones.SolicitudCufdMasivo")
+    @ResponseWrapper(localName = "solicitudCufdMasivoResponse", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.operaciones.SolicitudCufdMasivoResponse")
     public RespuestaCufdMasivo solicitudCufdMasivo(
         @WebParam(name = "SolicitudMasivo", targetNamespace = "")
         SolicitudMasivo solicitudMasivo);
@@ -94,12 +94,12 @@ public interface ServicioFacturacionCodigos {
      * 
      * @param solicitudNotificaRevocado
      * @return
-     *     returns com.example.demo.facturacion.RespuestaNotificaRevocado
+     *     returns com.example.demo.operaciones.RespuestaNotificaRevocado
      */
     @WebMethod
     @WebResult(name = "RespuestaNotificaRevocado", targetNamespace = "")
-    @RequestWrapper(localName = "notificaCertificadoRevocado", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.facturacion.NotificaCertificadoRevocado")
-    @ResponseWrapper(localName = "notificaCertificadoRevocadoResponse", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.facturacion.NotificaCertificadoRevocadoResponse")
+    @RequestWrapper(localName = "notificaCertificadoRevocado", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.operaciones.NotificaCertificadoRevocado")
+    @ResponseWrapper(localName = "notificaCertificadoRevocadoResponse", targetNamespace = "https://siat.impuestos.gob.bo/", className = "com.example.demo.operaciones.NotificaCertificadoRevocadoResponse")
     public RespuestaNotificaRevocado notificaCertificadoRevocado(
         @WebParam(name = "SolicitudNotificaRevocado", targetNamespace = "")
         SolicitudNotifcaRevocado solicitudNotificaRevocado);

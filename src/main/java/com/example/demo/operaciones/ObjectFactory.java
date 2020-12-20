@@ -11,7 +11,7 @@ import javax.xml.namespace.QName;
 /**
  * This object contains factory methods for each 
  * Java content interface and Java element interface 
- * generated in the com.example.demo.facturacion package. 
+ * generated in the com.example.demo.operaciones package. 
  * <p>An ObjectFactory allows you to programatically 
  * construct new instances of the Java representation 
  * for XML content. The Java representation of XML 
@@ -37,11 +37,11 @@ public class ObjectFactory {
     private final static QName _SolicitudCufdResponse_QNAME = new QName("https://siat.impuestos.gob.bo/", "solicitudCufdResponse");
     private final static QName _SolicitudCuisMasivoResponse_QNAME = new QName("https://siat.impuestos.gob.bo/", "solicitudCuisMasivoResponse");
     private final static QName _NotificaCertificadoRevocado_QNAME = new QName("https://siat.impuestos.gob.bo/", "notificaCertificadoRevocado");
-    private final static QName _SolicitudOperacionesCufdCodigoPuntoVenta_QNAME = new QName("", "codigoPuntoVenta");
     private final static QName _SolicitudNotifcaRevocadoFechaRevocacion_QNAME = new QName("", "fechaRevocacion");
+    private final static QName _SolicitudOperacionesCufdCodigoPuntoVenta_QNAME = new QName("", "codigoPuntoVenta");
 
     /**
-     * Create a new ObjectFactory that can be used to create new instances of schema derived classes for package: com.example.demo.facturacion
+     * Create a new ObjectFactory that can be used to create new instances of schema derived classes for package: com.example.demo.operaciones
      * 
      */
     public ObjectFactory() {
@@ -372,21 +372,21 @@ public class ObjectFactory {
     }
 
     /**
-     * Create an instance of {@link JAXBElement }{@code <}{@link Integer }{@code >}}
-     * 
-     */
-    @XmlElementDecl(namespace = "", name = "codigoPuntoVenta", scope = SolicitudOperacionesCufd.class)
-    public JAXBElement<Integer> createSolicitudOperacionesCufdCodigoPuntoVenta(Integer value) {
-        return new JAXBElement<Integer>(_SolicitudOperacionesCufdCodigoPuntoVenta_QNAME, Integer.class, SolicitudOperacionesCufd.class, value);
-    }
-
-    /**
      * Create an instance of {@link JAXBElement }{@code <}{@link XMLGregorianCalendar }{@code >}}
      * 
      */
     @XmlElementDecl(namespace = "", name = "fechaRevocacion", scope = SolicitudNotifcaRevocado.class)
     public JAXBElement<XMLGregorianCalendar> createSolicitudNotifcaRevocadoFechaRevocacion(XMLGregorianCalendar value) {
         return new JAXBElement<XMLGregorianCalendar>(_SolicitudNotifcaRevocadoFechaRevocacion_QNAME, XMLGregorianCalendar.class, SolicitudNotifcaRevocado.class, value);
+    }
+
+    /**
+     * Create an instance of {@link JAXBElement }{@code <}{@link Integer }{@code >}}
+     * 
+     */
+    @XmlElementDecl(namespace = "", name = "codigoPuntoVenta", scope = SolicitudOperacionesCufd.class)
+    public JAXBElement<Integer> createSolicitudOperacionesCufdCodigoPuntoVenta(Integer value) {
+        return new JAXBElement<Integer>(_SolicitudOperacionesCufdCodigoPuntoVenta_QNAME, Integer.class, SolicitudOperacionesCufd.class, value);
     }
 
     /**
