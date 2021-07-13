@@ -1,17 +1,16 @@
 package com.example.demo.controller.facturacion;
 
 
+import com.example.demo.configurate.LocalDateConverter;
 import com.example.demo.controller.facturacionOperaciones.FacturacionOperacionesController;
 import com.example.demo.facturacion.*;
-import com.example.demo.operaciones.RespuestaCuis;
-import com.example.demo.operaciones.ServicioFacturacionCodigos;
-import com.example.demo.operaciones.SolicitudOperacionesCuis;
 import com.example.demo.service.CufdService;
 import com.example.demo.service.CuisService;
 import com.example.demo.service.TokenService;
-import com.example.demo.wsdl.DatosUsuarioRequest;
-import com.example.demo.wsdl.ServicioAutenticacionSoap;
-import com.example.demo.wsdl.StrMensajeAplicacionDto;
+import com.example.demo.xml.Cabecera;
+import com.example.demo.xml.Detalle;
+import com.example.demo.xml.DocumentoFiscalDTO;
+import com.thoughtworks.xstream.XStream;
 import org.apache.cxf.endpoint.Client;
 import org.apache.cxf.frontend.ClientProxy;
 import org.apache.cxf.frontend.ClientProxyFactoryBean;
@@ -22,17 +21,28 @@ import org.apache.cxf.message.Message;
 import org.json.JSONException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.ModelAndView;
 
+import javax.xml.bind.DatatypeConverter;
+import javax.xml.datatype.DatatypeConfigurationException;
+import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.math.BigDecimal;
+import java.security.MessageDigest;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.zip.GZIPOutputStream;
 
 
 @RestController
@@ -51,8 +61,133 @@ public class ServicioFacturacionController  {
 
     @Autowired
     FacturacionOperacionesController facturacionOperacionesController;
-    @RequestMapping(value="/recepcionFactura", method=RequestMethod.GET)
-    public String recepcionFactura(@RequestBody Map<String, Object> data) throws IOException, JSONException {
+
+    public static String algoritmoHash(byte[] pArchivo, String algorithm) {
+        String hashValue = "";
+        try {
+            MessageDigest messageDigest = MessageDigest.getInstance(algorithm);
+            messageDigest.update(pArchivo);
+            byte[] digestedBytes = messageDigest.digest();
+            hashValue = DatatypeConverter.printHexBinary(digestedBytes).toLowerCase();
+        }
+        catch (Exception e) {
+            System.out.println("Error generando Hash");
+        }
+        return hashValue;
+    }
+
+    public static String obtenerSHA2(byte[] archivo) {
+
+        String vSha2 = algoritmoHash(archivo,"SHA-256");
+
+        return vSha2;
+
+    }
+    private static byte[] encodeBase64(String valor) {
+        try {
+            return Base64.getEncoder().encode(valor.getBytes("UTF-8"));
+        } catch (Exception e) {
+            System.out.println("mensaje " + e.getMessage());
+        }
+        return null;
+    }
+
+    private static byte[] compress(byte[] content) {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        try {
+            GZIPOutputStream gzipOutputStream = new GZIPOutputStream(byteArrayOutputStream);
+            gzipOutputStream.write(content);
+            gzipOutputStream.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return byteArrayOutputStream.toByteArray();
+    }
+
+    private static byte[] compressToEncodeBase64(byte[] compressed) {
+        // Convert to base64
+        return Base64.getEncoder().encode(compressed);
+    }
+    public static LinkedList area51(String xml) throws IOException {
+        /*//4) Obtener el arreglo de bytes Base64 del archivo generado
+        byte[] encodeBase64 = encodeBase64(xml);
+        //5)Comprimir el arreglo Base64 en formato Gzip
+        byte[] compress = compress(encodeBase64);
+        //6) Obtener el arreglo Base64 del comprimido Gzip (Cadena que se envía en la etiqueta archivo)*/
+        byte[] base64Compress = compress(xml);
+
+        //7) Obtener el HASH del arreglo (Se envía en la etiqueta hashArchivo)
+        //String hash = obtenerSHA2(base64Compress);
+        String hash =  obtenerSHA2(base64Compress);
+        System.out.println("hash:"+hash);
+        LinkedList hashYArchivo=new LinkedList();
+        hashYArchivo.add(hash);
+        hashYArchivo.add(base64Compress);
+        System.out.println("entro");
+        return hashYArchivo;
+    }
+
+    public String convert(DocumentoFiscalDTO documentoFiscalDTO) throws Exception{
+        LocalDateConverter conv = new LocalDateConverter();
+        XStream xstream = new XStream();
+        xstream.registerConverter(conv);
+        String dataXml = xstream.toXML(documentoFiscalDTO);
+        return dataXml;
+    }
+    /*Answer ans1=new Answer(101,"java is a programming language","ravi");
+    Answer ans2=new Answer(102,"java is a platform","john");
+
+    ArrayList<Answer> list=new ArrayList<Answer>();
+    list.add(ans1);
+    list.add(ans2);
+
+    Question que=new Question(1,"What is java?",list);
+    marshallerObj.marshal(que, new FileOutputStream("question.xml"));  */
+    public static byte[] compress(String data) throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream(data.length());
+        GZIPOutputStream gzip = new GZIPOutputStream(bos);
+        gzip.write(data.getBytes());
+        gzip.close();
+        byte[] compressed = bos.toByteArray();
+        bos.close();
+        return compressed;
+    }
+
+    @RequestMapping(value="/recepcionFactura", method=RequestMethod.POST)
+    public String recepcionFactura(@RequestBody Map<String, Object> data) throws Exception {
+        LocalDateTime now = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS");
+        LocalDateTime dateTime = LocalDateTime.parse(now.toString(), formatter);
+        System.out.println("hola");
+        XMLGregorianCalendar xmlGregorianCalendar = DatatypeFactory.newInstance().newXMLGregorianCalendar(dateTime.toString());
+        System.out.println(xmlGregorianCalendar.toString());
+        DocumentoFiscalDTO documentoFiscalDTO=new DocumentoFiscalDTO();
+        Cabecera cabecera=new Cabecera();
+        List<Detalle> listaDetalle=((List<Detalle>) data.get("detalle"));
+        cabecera.setNitEmisor(((Number) data.get("nitEmisor")).longValue());
+        cabecera.setRazonSocialEmisor((String) data.get("razonSocialEmisor"));
+        cabecera.setTelefono((String) data.get("telefono"));
+        cabecera.setNumeroFactura(((Number) data.get("numeroFactura")).longValue());
+        cabecera.setCodigoSucursal(((Number) data.get("codigoSucursal")).longValue());
+        cabecera.setDireccionsucursal((String) data.get("direccionsucursal"));
+        cabecera.setCodigoPuntoVenta(((Number) data.get("codigoPuntoVenta")).longValue());
+        cabecera.setFechaEmision(now);
+        cabecera.setNombreRazonSocial((String) data.get("nombreRazonSocial"));
+        cabecera.setCodigoTipoDocumentoIdentidad(((Number) data.get("codigoTipoDocumentoIdentidad")).longValue());
+        cabecera.setNumeroDocumento((String) data.get("numeroDocumento"));
+        cabecera.setComplemento((String) data.get("complemento"));
+        cabecera.setCodigoCliente((String) data.get("codigoCliente"));
+        cabecera.setCodigoMetodoPago(((Number) data.get("codigoMetodoPago")).longValue());
+        cabecera.setNumeroTarjeta(((Number) data.get("numeroTarjeta")).longValue());
+        cabecera.setMontoTotal(BigDecimal.valueOf((Double)  data.get("montoTotal")));
+        cabecera.setMontoTotalSujetoIva(BigDecimal.valueOf((Double)  data.get("montoTotalSujetoIva")));
+        cabecera.setCodigoMoneda(((Number) data.get("codigoMoneda")).longValue());
+        cabecera.setTipoCambio(BigDecimal.valueOf((Double)   data.get("tipoCambio")));
+        cabecera.setMontoTotalMoneda(BigDecimal.valueOf((Double)  data.get("montoTotalMoneda")));
+        cabecera.setUsuario((String) data.get("usuario"));
+        cabecera.setCodigoDocumentoSector(((Number) data.get("codigoDocumentoSector")).longValue());
+        documentoFiscalDTO.setCabecera(cabecera);
+        documentoFiscalDTO.setDetalle(listaDetalle);
         ServicioFacturacion recepcionFactura = getServicioFacturacion();
         RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
         SolicitudRecepcionFactura solicitudRecepcionFactura=new SolicitudRecepcionFactura();
@@ -62,14 +197,22 @@ public class ServicioFacturacionController  {
         solicitudRecepcionFactura.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudRecepcionFactura.setCodigoSucursal((Integer) data.get("codigoSucursal"));
         solicitudRecepcionFactura.setCodigoPuntoVenta((Integer)data.get("codigoPuntoVenta"));
-        solicitudRecepcionFactura.setArchivo((byte[]) data.get("archivo"));
+        String archivo = convert(documentoFiscalDTO);
+        System.out.println("archivo");
+        List files=area51(archivo);
+        System.out.println("doc");
+        solicitudRecepcionFactura.setArchivo((byte[]) files.get(1));
         solicitudRecepcionFactura.setCodigoDocumentoSector((Integer) data.get("codigoDocumentoSector"));
         solicitudRecepcionFactura.setCodigoEmision((Integer) data.get("codigoEmision"));
         solicitudRecepcionFactura.setTipoFacturaDocumento((Integer) data.get("tipoFacturaDocumento"));
-        solicitudRecepcionFactura.setFechaEnvio((XMLGregorianCalendar) data.get("fechaEnvio"));
-        solicitudRecepcionFactura.setHashArchivo((String) data.get("hashArchivo"));
-        solicitudRecepcionFactura.setCufd(cufdService.findCufd().get(0).getCufd());
-        solicitudRecepcionFactura.setCuis(cuisService.findCuis().get(0).getCuis());
+       /* DateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm:ss.SSS");
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss.SSS");
+
+*/
+        solicitudRecepcionFactura.setFechaEnvio(xmlGregorianCalendar);
+        solicitudRecepcionFactura.setHashArchivo(files.get(0).toString());
+        solicitudRecepcionFactura.setCufd((String) data.get("cufd"));
+        solicitudRecepcionFactura.setCuis((String) data.get("cuis"));
         Client client = ClientProxy.getClient(recepcionFactura);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -87,12 +230,12 @@ public class ServicioFacturacionController  {
     private ServicioFacturacion getServicioFacturacion() {
         ClientProxyFactoryBean factory = new JaxWsProxyFactoryBean();
         factory.setServiceClass(ServicioFacturacion.class);
-        factory.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/FacturacionCodigos?wsdl");
+        factory.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/ServicioFacturacionComputarizada?wsdl");
         return (ServicioFacturacion) factory.create();
     }
 
 
-    @RequestMapping(value="/anulacionFactura", method=RequestMethod.GET)
+    @RequestMapping(value="/anulacionFactura", method=RequestMethod.POST)
     public String anulacionFactura(@RequestBody Map<String, Object> data) throws IOException, JSONException {
         ServicioFacturacion anulacionFactura = getServicioFacturacion();
         RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
@@ -132,8 +275,8 @@ public class ServicioFacturacionController  {
         }
         return respuestaRecepcion.getCodigoRecepcion();
     }
-    @RequestMapping(value="/recepcionMasivaFacturas", method=RequestMethod.GET)
-    public String recepcionMasivaFacturas(@RequestBody Map<String, Object> data) throws IOException, JSONException {
+    @RequestMapping(value="/recepcionMasivaFacturas", method=RequestMethod.POST)
+    public String recepcionMasivaFacturas(@RequestBody Map<String, Object> data) throws IOException, JSONException, DatatypeConfigurationException, ParseException {
         ServicioFacturacion recepcionMasivaFactura = getServicioFacturacion();
         RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
         SolicitudRecepcionMasiva solicitudRecepcionMasiva=new SolicitudRecepcionMasiva();
@@ -148,9 +291,16 @@ public class ServicioFacturacionController  {
         solicitudRecepcionMasiva.setCufd(cufdService.findCufd().get(0).getCufd());
         solicitudRecepcionMasiva.setCuis(cuisService.findCuis().get(0).getCuis());
         solicitudRecepcionMasiva.setCantidadFacturas((Integer) data.get("cantidadFacturas"));
-        solicitudRecepcionMasiva.setArchivo((byte[]) data.get("cuis"));
-        solicitudRecepcionMasiva.setHashArchivo(cuisService.findCuis().get(0).getCuis());
-        solicitudRecepcionMasiva.setFechaEnvio((XMLGregorianCalendar) data.get("cuis"));
+        String archivo = (String) data.get("archivo");
+        List files=area51(archivo);
+        solicitudRecepcionMasiva.setArchivo((byte[]) files.get(1));
+        solicitudRecepcionMasiva.setHashArchivo(files.get(0).toString());
+        DateFormat format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        Date date = format.parse((String) data.get("fechaHoraFinEvento"));
+        GregorianCalendar cal = new GregorianCalendar();
+        cal.setTime(date);
+        XMLGregorianCalendar xmlGregCal =  DatatypeFactory.newInstance().newXMLGregorianCalendar(cal);
+        solicitudRecepcionMasiva.setFechaEnvio(xmlGregCal);
         Client client = ClientProxy.getClient(recepcionMasivaFactura);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -165,8 +315,8 @@ public class ServicioFacturacionController  {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaRecepcion.getCodigoRecepcion();
     }
-    @RequestMapping(value="/recepcionPaqueteFacturas", method=RequestMethod.GET)
-    public String recepcionPaqueteFacturas(@RequestBody Map<String, Object> data) throws IOException, JSONException {
+    @RequestMapping(value="/recepcionPaqueteFacturas", method=RequestMethod.POST)
+    public String recepcionPaqueteFacturas(@RequestBody Map<String, Object> data) throws IOException, JSONException, DatatypeConfigurationException, ParseException {
 
         ServicioFacturacion recepcionPaqueteFacturas = getServicioFacturacion();
         RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
@@ -182,9 +332,16 @@ public class ServicioFacturacionController  {
         solicitudRecepcionPaquete.setCufd(cufdService.findCufd().get(0).getCufd());
         solicitudRecepcionPaquete.setCuis(cuisService.findCuis().get(0).getCuis());
         solicitudRecepcionPaquete.setCantidadFacturas((Integer) data.get("cantidadFacturas"));
-        solicitudRecepcionPaquete.setArchivo((byte[]) data.get("cuis"));
-        solicitudRecepcionPaquete.setHashArchivo(cuisService.findCuis().get(0).getCuis());
-        solicitudRecepcionPaquete.setFechaEnvio((XMLGregorianCalendar) data.get("cuis"));
+        String archivo = (String) data.get("archivo");
+        List files=area51(archivo);
+        solicitudRecepcionPaquete.setArchivo((byte[]) files.get(1));
+        solicitudRecepcionPaquete.setHashArchivo(files.get(0).toString());
+        DateFormat format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        Date date = format.parse((String) data.get("fechaHoraFinEvento"));
+        GregorianCalendar cal = new GregorianCalendar();
+        cal.setTime(date);
+        XMLGregorianCalendar xmlGregCal =  DatatypeFactory.newInstance().newXMLGregorianCalendar(cal);
+        solicitudRecepcionPaquete.setFechaEnvio(xmlGregCal);
         solicitudRecepcionPaquete.setCodigoEvento((long) data.get("codigoEvento"));
         Client client = ClientProxy.getClient(recepcionPaqueteFacturas);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
@@ -200,7 +357,7 @@ public class ServicioFacturacionController  {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaRecepcion.getCodigoRecepcion();
     }
-    @RequestMapping(value="/reversionAnulacionFactura", method=RequestMethod.GET)
+    @RequestMapping(value="/reversionAnulacionFactura", method=RequestMethod.POST)
     public String reversionAnulacionFactura(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacion reversionAnulacionFactura = getServicioFacturacion();
@@ -240,7 +397,7 @@ public class ServicioFacturacionController  {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaRecepcion.getCodigoRecepcion();
     }
-    @RequestMapping(value="/validacionRecepcionMasivaFactura", method=RequestMethod.GET)
+    @RequestMapping(value="/validacionRecepcionMasivaFactura", method=RequestMethod.POST)
     public String validacionRecepcionMasivaFactura(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacion validacionRecepcionMasivaFactura = getServicioFacturacion();
@@ -271,7 +428,7 @@ public class ServicioFacturacionController  {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaRecepcion.getCodigoRecepcion();
     }
-    @RequestMapping(value="/validacionRecepcionPaqueteFactura", method=RequestMethod.GET)
+    @RequestMapping(value="/validacionRecepcionPaqueteFactura", method=RequestMethod.POST)
     public String validacionRecepcionPaqueteFactura(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacion validacionRecepcionPaqueteFactura = getServicioFacturacion();
@@ -302,7 +459,7 @@ public class ServicioFacturacionController  {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaRecepcion.getCodigoRecepcion();
     }
-    @RequestMapping(value="/verificacionEstadoFactura", method=RequestMethod.GET)
+    @RequestMapping(value="/verificacionEstadoFactura", method=RequestMethod.POST)
     public String verificacionEstadoFactura(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacion verificacionEstadoFactura = getServicioFacturacion();
@@ -341,7 +498,7 @@ public class ServicioFacturacionController  {
         }
         return respuestaRecepcion.getCodigoRecepcion();
     }
-    @RequestMapping(value="/verificarComunicacion", method=RequestMethod.GET)
+    @RequestMapping(value="/verificarComunicacion", method=RequestMethod.POST)
     public int verificarComunicacion() throws IOException, JSONException {
         int valor=0;
         ServicioFacturacion verificarComunicacion = getServicioFacturacion();

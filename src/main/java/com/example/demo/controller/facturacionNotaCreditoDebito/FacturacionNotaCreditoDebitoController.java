@@ -2,15 +2,10 @@ package com.example.demo.controller.facturacionNotaCreditoDebito;
 
 
 import com.example.demo.controller.facturacionOperaciones.FacturacionOperacionesController;
-import com.example.demo.controller.operaciones.ServicioOperacionesController;
 import com.example.demo.facturacionNotaCreditoDebito.*;
-import com.example.demo.operaciones.RespuestaCuis;
 import com.example.demo.service.CufdService;
 import com.example.demo.service.CuisService;
 import com.example.demo.service.TokenService;
-import com.example.demo.wsdl.DatosUsuarioRequest;
-import com.example.demo.wsdl.ServicioAutenticacionSoap;
-import com.example.demo.wsdl.StrMensajeAplicacionDto;
 import org.apache.cxf.endpoint.Client;
 import org.apache.cxf.frontend.ClientProxy;
 import org.apache.cxf.frontend.ClientProxyFactoryBean;
@@ -28,12 +23,14 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.ModelAndView;
 
+import javax.xml.datatype.DatatypeConfigurationException;
+import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 @RestController
 @RequestMapping(value = "/facNotaCreditoDebito", produces = {MediaType.APPLICATION_JSON_VALUE})
@@ -52,7 +49,7 @@ public class FacturacionNotaCreditoDebitoController {
     @Autowired
     FacturacionOperacionesController facturacionOperacionesController;
 
-    @RequestMapping(value="/anulacionNotaFiscal", method= RequestMethod.GET)
+    @RequestMapping(value="/anulacionNotaFiscal", method= RequestMethod.POST)
     public String anulacionNotaFiscal(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacion anulacionNotaFiscal = getServicio();
@@ -93,14 +90,18 @@ public class FacturacionNotaCreditoDebitoController {
         }
         return respuestaRecepcion.getCodigoRecepcion();
     }
-    @RequestMapping(value="/recepcionNotaFiscal", method= RequestMethod.GET)
-    public String recepcionNotaFiscal(@RequestBody Map<String, Object> data) throws IOException, JSONException {
+    @RequestMapping(value="/recepcionNotaFiscal", method= RequestMethod.POST)
+    public String recepcionNotaFiscal(@RequestBody Map<String, Object> data) throws IOException, JSONException, ParseException, DatatypeConfigurationException {
         ServicioFacturacion recepcionNotaFiscal = getServicio();
         RespuestaRecepcion respuestaRecepcion=new RespuestaRecepcion();
         SolicitudRecepcionFactura solicitudRecepcionFactura=new SolicitudRecepcionFactura();
         solicitudRecepcionFactura.setHashArchivo((String) data.get("hashArchivo"));
-        solicitudRecepcionFactura.setFechaEnvio((XMLGregorianCalendar) data.get("fechaEnvio"));
-        solicitudRecepcionFactura.setArchivo((byte[]) data.get("archivo"));
+        DateFormat format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        Date date = format.parse((String) data.get("fechaHoraFinEvento"));
+        GregorianCalendar cal = new GregorianCalendar();
+        cal.setTime(date);
+        XMLGregorianCalendar xmlGregCal =  DatatypeFactory.newInstance().newXMLGregorianCalendar(cal);
+        solicitudRecepcionFactura.setFechaEnvio(xmlGregCal);        solicitudRecepcionFactura.setArchivo((byte[]) data.get("archivo"));
         solicitudRecepcionFactura.setCodigoAmbiente((Integer) data.get("codigoAmbiente"));
         solicitudRecepcionFactura.setCodigoModalidad((Integer) data.get("codigoModalidad"));
         solicitudRecepcionFactura.setNit(((Number) data.get("nit")).longValue());
@@ -126,7 +127,7 @@ public class FacturacionNotaCreditoDebitoController {
         return respuestaRecepcion.getCodigoRecepcion();
     }
 
-    @RequestMapping(value="/reversionAnulacionNotaFiscal", method= RequestMethod.GET)
+    @RequestMapping(value="/reversionAnulacionNotaFiscal", method= RequestMethod.POST)
     public String reversionAnulacionNotaFiscal(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacion reversionAnulacionNotaFiscal = getServicio();
@@ -175,7 +176,7 @@ public class FacturacionNotaCreditoDebitoController {
         return (ServicioFacturacion) factory.create();
     }
 
-    @RequestMapping(value="/verificacionEstadoNotaFiscal", method= RequestMethod.GET)
+    @RequestMapping(value="/verificacionEstadoNotaFiscal", method= RequestMethod.POST)
     public String verificacionEstadoNotaFiscal(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacion verificacionEstadoNotaFiscal = getServicio();
@@ -217,7 +218,7 @@ public class FacturacionNotaCreditoDebitoController {
         return respuestaRecepcion.getCodigoRecepcion();
     }
 
-    @RequestMapping(value="/verificarComunicacion", method= RequestMethod.GET)
+    @RequestMapping(value="/verificarComunicacion", method= RequestMethod.POST)
     public int verificarComunicacion() throws IOException, JSONException {
         int respuestaRecepcion=0;
         ServicioFacturacion verificarComunicacion = getServicio();

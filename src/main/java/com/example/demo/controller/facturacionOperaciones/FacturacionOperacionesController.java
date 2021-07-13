@@ -2,13 +2,9 @@ package com.example.demo.controller.facturacionOperaciones;
 
 
 import com.example.demo.facturacionOperaciones.*;
-import com.example.demo.operaciones.RespuestaCuis;
 import com.example.demo.service.CufdService;
 import com.example.demo.service.CuisService;
 import com.example.demo.service.TokenService;
-import com.example.demo.wsdl.DatosUsuarioRequest;
-import com.example.demo.wsdl.ServicioAutenticacionSoap;
-import com.example.demo.wsdl.StrMensajeAplicacionDto;
 import org.apache.cxf.endpoint.Client;
 import org.apache.cxf.frontend.ClientProxy;
 import org.apache.cxf.frontend.ClientProxyFactoryBean;
@@ -27,13 +23,16 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.xml.bind.JAXBElement;
+import javax.xml.datatype.DatatypeConfigurationException;
+import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
+import javax.xml.namespace.QName;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 @RestController
 @RequestMapping(value = "/facOperaciones", produces = {MediaType.APPLICATION_JSON_VALUE})
@@ -49,7 +48,7 @@ public class FacturacionOperacionesController {
     @Autowired
     CuisService cuisService;
 
-    @RequestMapping(value="/cierreOperacionesSistema", method= RequestMethod.GET)
+    @RequestMapping(value="/cierreOperacionesSistema", method= RequestMethod.POST)
     public String cierreOperacionesSistema(@RequestBody Map<String, Object> data) throws IOException, JSONException {
         ServicioFacturacionOperaciones cierreOperacionesSistema = getServicioFacturacionOperaciones();
         RespuestaCierreSistemas respuestaCierreSistemas=new RespuestaCierreSistemas();
@@ -59,7 +58,6 @@ public class FacturacionOperacionesController {
         solicitudOperaciones.setNit(((Number) data.get("nit")).longValue());
         solicitudOperaciones.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudOperaciones.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudOperaciones.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
         solicitudOperaciones.setCuis(cuisService.findCuis().get(0).getCuis());
         Client client = ClientProxy.getClient(cierreOperacionesSistema);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
@@ -72,10 +70,10 @@ public class FacturacionOperacionesController {
         } catch (Exception e) {
             System.out.println("Error: " + e.getMessage());
         }
-        ModelAndView mv = new ModelAndView("index.html");
+        System.out.println(respuestaCierreSistemas.getMensajeServicioList());
         return respuestaCierreSistemas.getCodigoSistema();
     }
-    @RequestMapping(value="/cierrePuntoVenta", method= RequestMethod.GET)
+    @RequestMapping(value="/cierrePuntoVenta", method= RequestMethod.POST)
     public List<MensajeServicio> cierrePuntoVenta(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacionOperaciones cierrePuntoVenta = getServicioFacturacionOperaciones();
@@ -101,7 +99,7 @@ public class FacturacionOperacionesController {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaCierrePuntoVenta.getMensajeServicioList();
     }
-    @RequestMapping(value="/consultaEventoSignificativo", method= RequestMethod.GET)
+    @RequestMapping(value="/consultaEventoSignificativo", method= RequestMethod.POST)
     public long consultaEventoSignificativo(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacionOperaciones consultaEventoSignificativo = getServicioFacturacionOperaciones();
@@ -111,7 +109,10 @@ public class FacturacionOperacionesController {
         solicitudConsultaEvento.setNit(((Number) data.get("nit")).longValue());
         solicitudConsultaEvento.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudConsultaEvento.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudConsultaEvento.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(
+                new QName(Integer.class.getSimpleName()), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudConsultaEvento.setCodigoPuntoVenta(codigoPuntoVenta);
         solicitudConsultaEvento.setCuis(cuisService.findCuis().get(0).getCuis());
         solicitudConsultaEvento.setCufd(cufdService.findCufd().get(0).getCufd());
         solicitudConsultaEvento.setFechaEvento((XMLGregorianCalendar) data.get("fechaEvento"));
@@ -129,21 +130,16 @@ public class FacturacionOperacionesController {
         }
         return respuestaListaEventos.getCodigoRecepcionEventoSignificativo();
     }
-    @RequestMapping(value="/consultaPuntoVenta", method= RequestMethod.GET)
+    @RequestMapping(value="/consultaPuntoVenta", method= RequestMethod.POST)
     public List<PuntosVentasDto> consultaPuntoVenta(@RequestBody Map<String, Object> data) throws IOException, JSONException {
-
-        ClientProxyFactoryBean factory = new JaxWsProxyFactoryBean();
-        factory.setServiceClass(ServicioFacturacionOperaciones.class);
-        factory.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/ServicioFacturacionNotaCreditoDebito?wsdl");
         RespuestaConsultaPuntoVenta respuestaConsultaPuntoVenta=new RespuestaConsultaPuntoVenta();
-        ServicioFacturacionOperaciones consultaPuntoVenta = (ServicioFacturacionOperaciones) factory.create();
+        ServicioFacturacionOperaciones consultaPuntoVenta = getServicioFacturacionOperaciones();
         SolicitudConsultaPuntoVenta solicitudConsultaPuntoVenta=new SolicitudConsultaPuntoVenta();
         solicitudConsultaPuntoVenta.setCodigoAmbiente((Integer) data.get("codigoAmbiente"));
         solicitudConsultaPuntoVenta.setNit(((Number) data.get("nit")).longValue());
         solicitudConsultaPuntoVenta.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudConsultaPuntoVenta.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudConsultaPuntoVenta.setCuis(cuisService.findCuis().get(0).getCuis());
-
+        solicitudConsultaPuntoVenta.setCuis((String) data.get("cuis"));
         Client client = ClientProxy.getClient(consultaPuntoVenta);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -158,7 +154,7 @@ public class FacturacionOperacionesController {
         return respuestaConsultaPuntoVenta.getListaPuntosVentas();
     }
     @RequestMapping(value="/registroEventoSignifcativo", method= RequestMethod.POST)
-    public long registroEventoSignifcativo(@RequestBody Map<String, Object> data) throws IOException, JSONException {
+    public long registroEventoSignifcativo(@RequestBody Map<String, Object> data) throws IOException, JSONException, ParseException, DatatypeConfigurationException {
 
         ServicioFacturacionOperaciones registroEventoSignifcativo = getServicioFacturacionOperaciones();
         RespuestaListaEventos respuestaListaEventos=new RespuestaListaEventos();
@@ -168,13 +164,25 @@ public class FacturacionOperacionesController {
         solicitudEventoSignificativo.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudEventoSignificativo.setCodigoSucursal((Integer) data.get("codigoSucursal"));
         solicitudEventoSignificativo.setCuis(cuisService.findCuis().get(0).getCuis());
-        solicitudEventoSignificativo.setFechaHoraFinEvento((XMLGregorianCalendar) data.get("fechaHoraFinEvento"));
+        DateFormat format = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        Date date = format.parse((String) data.get("fechaHoraFinEvento"));
+        GregorianCalendar cal = new GregorianCalendar();
+        cal.setTime(date);
+        XMLGregorianCalendar xmlGregCal =  DatatypeFactory.newInstance().newXMLGregorianCalendar(cal);
+        solicitudEventoSignificativo.setFechaHoraFinEvento(xmlGregCal);
         solicitudEventoSignificativo.setDescripcion((String) data.get("descripcion"));
         solicitudEventoSignificativo.setCufdEvento((String) data.get("cufdEvento"));
         solicitudEventoSignificativo.setCodigoMotivoEvento((Integer) data.get("codigoMotivoEvento"));
-        solicitudEventoSignificativo.setFechaHoraInicioEvento((XMLGregorianCalendar) data.get("fechaHoraInicioEvento"));
+        Date date2 = format.parse((String) data.get("fechaHoraInicioEvento"));
+        GregorianCalendar cal2 = new GregorianCalendar();
+        cal2.setTime(date2);
+        XMLGregorianCalendar fechaInicio =  DatatypeFactory.newInstance().newXMLGregorianCalendar(cal2);
+        solicitudEventoSignificativo.setFechaHoraInicioEvento(fechaInicio);
         solicitudEventoSignificativo.setCufd(cufdService.findCufd().get(0).getCufd());
-        solicitudEventoSignificativo.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(
+                new QName(Integer.class.getSimpleName()), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudEventoSignificativo.setCodigoPuntoVenta(codigoPuntoVenta);
         Client client = ClientProxy.getClient(registroEventoSignifcativo);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -189,7 +197,7 @@ public class FacturacionOperacionesController {
         return respuestaListaEventos.getCodigoRecepcionEventoSignificativo();
     }
 
-    @RequestMapping(value="/verificarComunicacion", method= RequestMethod.GET)
+    @RequestMapping(value="/verificarComunicacion", method= RequestMethod.POST)
     public int verificarComunicacion() throws IOException, JSONException {
 
         ServicioFacturacionOperaciones verificarComunicacion = getServicioFacturacionOperaciones();
@@ -276,7 +284,9 @@ public class FacturacionOperacionesController {
         solicitudRegFactRegularizacion.setCodigoModalidad((Integer) data.get("codigoModalidad"));
         solicitudRegFactRegularizacion.setCuis(cuisService.findCuis().get(0).getCuis());
         solicitudRegFactRegularizacion.setCufd(cufdService.findCufd().get(0).getCufd());
-        solicitudRegFactRegularizacion.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(new QName("codigoPuntoVenta"), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudRegFactRegularizacion.setCodigoPuntoVenta(codigoPuntoVenta);
         solicitudRegFactRegularizacion.setActividadEconomica((String) data.get("actividadEconomica"));
         solicitudRegFactRegularizacion.setDireccion((String) data.get("direccion"));
         String nit=(String) data.get("nit");
@@ -307,13 +317,12 @@ public class FacturacionOperacionesController {
     private ServicioFacturacionOperaciones getServicioFacturacionOperaciones() {
         ClientProxyFactoryBean factory = new JaxWsProxyFactoryBean();
         factory.setServiceClass(ServicioFacturacionOperaciones.class);
-        factory.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/ServicioFacturacionNotaCreditoDebito?wsdl");
+        factory.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/FacturacionOperaciones?wsdl");
         return (ServicioFacturacionOperaciones) factory.create();
     }
 
     @RequestMapping(value="/registroPuntoVenta", method= RequestMethod.POST)
     public int registroPuntoVenta(@RequestBody Map<String, Object> data) throws IOException, JSONException {
-
         ServicioFacturacionOperaciones registroPuntoVenta = getServicioFacturacionOperaciones();
         SolicitudRegistroPuntoVenta solicitudRegistroPuntoVenta=new SolicitudRegistroPuntoVenta();
         solicitudRegistroPuntoVenta.setCodigoAmbiente((Integer) data.get("codigoAmbiente"));
@@ -325,6 +334,7 @@ public class FacturacionOperacionesController {
         solicitudRegistroPuntoVenta.setCodigoModalidad((Integer) data.get("codigoModalidad"));
         solicitudRegistroPuntoVenta.setNombrePuntoVenta((String) data.get("nombrePuntoVenta"));
         solicitudRegistroPuntoVenta.setCodigoTipoPuntoVenta((Integer) data.get("codigoTipoPuntoVenta"));
+
         RespuestaRegistroPuntoVenta respuestaRegistroPuntoVenta=new RespuestaRegistroPuntoVenta();
         Client client = ClientProxy.getClient(registroPuntoVenta);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();

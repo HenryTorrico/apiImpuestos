@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.xml.bind.JAXBElement;
+import javax.xml.namespace.QName;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -45,9 +46,8 @@ public class ServicioSincronizacionController {
 
     @Autowired
     CufdService cufdService;
-    @RequestMapping(value="/actividades", method= RequestMethod.GET)
+    @RequestMapping(value="/actividades", method= RequestMethod.POST)
     public List<ActividadesDto> sincronizarActividades(@RequestBody Map<String, Object> data) throws IOException, JSONException {
-
         ServicioFacturacionSincronizacion sincronizarActividades = getServicioFacturacionSincronizacion();
         RespuestaListaActividades respuestaListaActividades=new RespuestaListaActividades();
         SolicitudSincronizacion solicitudSincronizacion=new SolicitudSincronizacion();
@@ -55,8 +55,10 @@ public class ServicioSincronizacionController {
         solicitudSincronizacion.setNit(((Number) data.get("nit")).longValue());
         solicitudSincronizacion.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudSincronizacion.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudSincronizacion.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
-        solicitudSincronizacion.setCuis(cuisService.findCuis().get(0).getCuis());
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(new QName("codigoPuntoVenta"), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudSincronizacion.setCodigoPuntoVenta(codigoPuntoVenta);
+        solicitudSincronizacion.setCuis((String) data.get("cuis"));
         Client client = ClientProxy.getClient(sincronizarActividades);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -71,9 +73,8 @@ public class ServicioSincronizacionController {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaListaActividades.getListaActividades();
     }
-    @RequestMapping(value="/fechaHora", method= RequestMethod.GET)
+    @RequestMapping(value="/fechaHora", method= RequestMethod.POST)
     public String sincronizarFechaHora(@RequestBody Map<String, Object> data) throws IOException, JSONException {
-
         ServicioFacturacionSincronizacion sincronizarFechaHora = getServicioFacturacionSincronizacion();
         RespuestaFechaHora respuestaFechaHora=new RespuestaFechaHora();
         SolicitudSincronizacion solicitudSincronizacion=new SolicitudSincronizacion();
@@ -81,8 +82,10 @@ public class ServicioSincronizacionController {
         solicitudSincronizacion.setNit(((Number) data.get("nit")).longValue());
         solicitudSincronizacion.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudSincronizacion.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudSincronizacion.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
-        solicitudSincronizacion.setCuis(cuisService.findCuis().get(0).getCuis());
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(new QName("codigoPuntoVenta"), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudSincronizacion.setCodigoPuntoVenta(codigoPuntoVenta);
+        solicitudSincronizacion.setCuis((String) data.get("cuis"));
         Client client = ClientProxy.getClient(sincronizarFechaHora);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -97,7 +100,7 @@ public class ServicioSincronizacionController {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaFechaHora.getFechaHora();
     }
-    @RequestMapping(value="/listaActividadesDocumentos", method= RequestMethod.GET)
+    @RequestMapping(value="/listaActividadesDocumentos", method= RequestMethod.POST)
     public List<ActividadesDocumentoSectorDto> listaActividadesDocumentos(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacionSincronizacion listaActividadesDocumentos = getServicioFacturacionSincronizacion();
@@ -107,8 +110,10 @@ public class ServicioSincronizacionController {
         solicitudSincronizacion.setNit(((Number) data.get("nit")).longValue());
         solicitudSincronizacion.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudSincronizacion.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudSincronizacion.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
-        solicitudSincronizacion.setCuis(cuisService.findCuis().get(0).getCuis());
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(new QName("codigoPuntoVenta"), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudSincronizacion.setCodigoPuntoVenta(codigoPuntoVenta);
+        solicitudSincronizacion.setCuis((String) data.get("cuis"));
         Client client = ClientProxy.getClient(listaActividadesDocumentos);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -123,7 +128,7 @@ public class ServicioSincronizacionController {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaListaActividadesDocumentoSector.getListaActividadesDocumentoSector();
     }
-    @RequestMapping(value="/listaLeyendasFactura", method= RequestMethod.GET)
+    @RequestMapping(value="/listaLeyendasFactura", method= RequestMethod.POST)
     public List<ParametricaLeyendasDto> listaLeyendasFactura(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacionSincronizacion listaLeyendasFactura = getServicioFacturacionSincronizacion();
@@ -133,8 +138,10 @@ public class ServicioSincronizacionController {
         solicitudSincronizacion.setNit(((Number) data.get("nit")).longValue());
         solicitudSincronizacion.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudSincronizacion.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudSincronizacion.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
-        solicitudSincronizacion.setCuis(cuisService.findCuis().get(0).getCuis());
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(new QName("codigoPuntoVenta"), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudSincronizacion.setCodigoPuntoVenta(codigoPuntoVenta);
+        solicitudSincronizacion.setCuis((String) data.get("cuis"));
         Client client = ClientProxy.getClient(listaLeyendasFactura);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -149,7 +156,7 @@ public class ServicioSincronizacionController {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaListaParametricasLeyendas.getListaLeyendas();
     }
-    @RequestMapping(value="/listaMensajesServicios", method= RequestMethod.GET)
+    @RequestMapping(value="/listaMensajesServicios", method= RequestMethod.POST)
     public List<ParametricasDto> listaMensajesServicios(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacionSincronizacion listaMensajesServicios = getServicioFacturacionSincronizacion();
@@ -159,8 +166,10 @@ public class ServicioSincronizacionController {
         solicitudSincronizacion.setNit(((Number) data.get("nit")).longValue());
         solicitudSincronizacion.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudSincronizacion.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudSincronizacion.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
-        solicitudSincronizacion.setCuis(cuisService.findCuis().get(0).getCuis());
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(new QName("codigoPuntoVenta"), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudSincronizacion.setCodigoPuntoVenta(codigoPuntoVenta);
+        solicitudSincronizacion.setCuis((String) data.get("cuis"));
         Client client = ClientProxy.getClient(listaMensajesServicios);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -175,7 +184,7 @@ public class ServicioSincronizacionController {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaListaParametricas.getListaCodigos();
     }
-    @RequestMapping(value="/listaProductosServicios", method= RequestMethod.GET)
+    @RequestMapping(value="/listaProductosServicios", method= RequestMethod.POST)
     public List<ProductosDto> listaProductosServicios(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacionSincronizacion listaProductosServicios = getServicioFacturacionSincronizacion();
@@ -185,8 +194,10 @@ public class ServicioSincronizacionController {
         solicitudSincronizacion.setNit(((Number) data.get("nit")).longValue());
         solicitudSincronizacion.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudSincronizacion.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudSincronizacion.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
-        solicitudSincronizacion.setCuis(cuisService.findCuis().get(0).getCuis());
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(new QName("codigoPuntoVenta"), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudSincronizacion.setCodigoPuntoVenta(codigoPuntoVenta);
+        solicitudSincronizacion.setCuis((String) data.get("cuis"));
         Client client = ClientProxy.getClient(listaProductosServicios);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -201,7 +212,7 @@ public class ServicioSincronizacionController {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaListaProductos.getListaCodigos();
     }
-    @RequestMapping(value="/arametricaEventos", method= RequestMethod.GET)
+    @RequestMapping(value="/arametricaEventos", method= RequestMethod.POST)
     public List<ParametricasDto> arametricaEventos(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacionSincronizacion parametricaEventos = getServicioFacturacionSincronizacion();
@@ -211,8 +222,10 @@ public class ServicioSincronizacionController {
         solicitudSincronizacion.setNit(((Number) data.get("nit")).longValue());
         solicitudSincronizacion.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudSincronizacion.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudSincronizacion.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
-        solicitudSincronizacion.setCuis(cuisService.findCuis().get(0).getCuis());
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(new QName("codigoPuntoVenta"), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudSincronizacion.setCodigoPuntoVenta(codigoPuntoVenta);
+        solicitudSincronizacion.setCuis((String) data.get("cuis"));
         Client client = ClientProxy.getClient(parametricaEventos);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -227,7 +240,7 @@ public class ServicioSincronizacionController {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaListaParametricas.getListaCodigos();
     }
-        @RequestMapping(value="/parametricaMotivoAnulacion", method= RequestMethod.GET)
+        @RequestMapping(value="/parametricaMotivoAnulacion", method= RequestMethod.POST)
     public List<ParametricasDto> parametricaMotivoAnulacion(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
             ServicioFacturacionSincronizacion parametricaMotivoAnulacion = getServicioFacturacionSincronizacion();
@@ -237,8 +250,10 @@ public class ServicioSincronizacionController {
         solicitudSincronizacion.setNit(((Number) data.get("nit")).longValue());
         solicitudSincronizacion.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudSincronizacion.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudSincronizacion.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
-        solicitudSincronizacion.setCuis(cuisService.findCuis().get(0).getCuis());
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(new QName("codigoPuntoVenta"), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudSincronizacion.setCodigoPuntoVenta(codigoPuntoVenta);
+        solicitudSincronizacion.setCuis((String) data.get("cuis"));
         Client client = ClientProxy.getClient(parametricaMotivoAnulacion);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -253,7 +268,7 @@ public class ServicioSincronizacionController {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaListaParametricas.getListaCodigos();
     }
-    @RequestMapping(value="/parametricaPaisOrigen", method= RequestMethod.GET)
+    @RequestMapping(value="/parametricaPaisOrigen", method= RequestMethod.POST)
     public List<ParametricasDto> parametricaPaisOrigen(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacionSincronizacion parametricaPaisOrigen = getServicioFacturacionSincronizacion();
@@ -263,8 +278,10 @@ public class ServicioSincronizacionController {
         solicitudSincronizacion.setNit(((Number) data.get("nit")).longValue());
         solicitudSincronizacion.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudSincronizacion.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudSincronizacion.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
-        solicitudSincronizacion.setCuis(cuisService.findCuis().get(0).getCuis());
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(new QName("codigoPuntoVenta"), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudSincronizacion.setCodigoPuntoVenta(codigoPuntoVenta);
+        solicitudSincronizacion.setCuis((String) data.get("cuis"));
         Client client = ClientProxy.getClient(parametricaPaisOrigen);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -279,7 +296,7 @@ public class ServicioSincronizacionController {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaListaParametricas.getListaCodigos();
     }
-    @RequestMapping(value="/parametricaTipoDocIdentidad", method= RequestMethod.GET)
+    @RequestMapping(value="/parametricaTipoDocIdentidad", method= RequestMethod.POST)
     public List<ParametricasDto> parametricaTipoDocIdentidad(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacionSincronizacion parametricaTipoDocIdentidad = getServicioFacturacionSincronizacion();
@@ -289,8 +306,10 @@ public class ServicioSincronizacionController {
         solicitudSincronizacion.setNit(((Number) data.get("nit")).longValue());
         solicitudSincronizacion.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudSincronizacion.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudSincronizacion.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
-        solicitudSincronizacion.setCuis(cuisService.findCuis().get(0).getCuis());
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(new QName("codigoPuntoVenta"), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudSincronizacion.setCodigoPuntoVenta(codigoPuntoVenta);
+        solicitudSincronizacion.setCuis((String) data.get("cuis"));
         Client client = ClientProxy.getClient(parametricaTipoDocIdentidad);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -305,7 +324,7 @@ public class ServicioSincronizacionController {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaListaParametricas.getListaCodigos();
     }
-    @RequestMapping(value="/parametricaTipoDocSector", method= RequestMethod.GET)
+    @RequestMapping(value="/parametricaTipoDocSector", method= RequestMethod.POST)
     public List<ParametricasDto> parametricaTipoDocSector(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacionSincronizacion parametricaTipoDocSector = getServicioFacturacionSincronizacion();
@@ -315,8 +334,10 @@ public class ServicioSincronizacionController {
         solicitudSincronizacion.setNit(((Number) data.get("nit")).longValue());
         solicitudSincronizacion.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudSincronizacion.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudSincronizacion.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
-        solicitudSincronizacion.setCuis(cuisService.findCuis().get(0).getCuis());
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(new QName("codigoPuntoVenta"), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudSincronizacion.setCodigoPuntoVenta(codigoPuntoVenta);
+        solicitudSincronizacion.setCuis((String) data.get("cuis"));
         Client client = ClientProxy.getClient(parametricaTipoDocSector);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -331,7 +352,7 @@ public class ServicioSincronizacionController {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaListaParametricas.getListaCodigos();
     }
-    @RequestMapping(value="/parametricaTipoEmision", method= RequestMethod.GET)
+    @RequestMapping(value="/parametricaTipoEmision", method= RequestMethod.POST)
     public List<ParametricasDto> parametricaTipoEmision(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacionSincronizacion parametricaTipoEmision = getServicioFacturacionSincronizacion();
@@ -341,8 +362,10 @@ public class ServicioSincronizacionController {
         solicitudSincronizacion.setNit(((Number) data.get("nit")).longValue());
         solicitudSincronizacion.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudSincronizacion.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudSincronizacion.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
-        solicitudSincronizacion.setCuis(cuisService.findCuis().get(0).getCuis());
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(new QName("codigoPuntoVenta"), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudSincronizacion.setCodigoPuntoVenta(codigoPuntoVenta);
+        solicitudSincronizacion.setCuis((String) data.get("cuis"));
         Client client = ClientProxy.getClient(parametricaTipoEmision);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -357,7 +380,7 @@ public class ServicioSincronizacionController {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaListaParametricas.getListaCodigos();
     }
-    @RequestMapping(value="/parametricaTipoHabitacion", method= RequestMethod.GET)
+    @RequestMapping(value="/parametricaTipoHabitacion", method= RequestMethod.POST)
     public List<ParametricasDto> parametricaTipoHabitacion(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacionSincronizacion parametricaTipoHabitacion = getServicioFacturacionSincronizacion();
@@ -367,8 +390,10 @@ public class ServicioSincronizacionController {
         solicitudSincronizacion.setNit(((Number) data.get("nit")).longValue());
         solicitudSincronizacion.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudSincronizacion.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudSincronizacion.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
-        solicitudSincronizacion.setCuis(cuisService.findCuis().get(0).getCuis());
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(new QName("codigoPuntoVenta"), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudSincronizacion.setCodigoPuntoVenta(codigoPuntoVenta);
+        solicitudSincronizacion.setCuis((String) data.get("cuis"));
         Client client = ClientProxy.getClient(parametricaTipoHabitacion);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -383,7 +408,7 @@ public class ServicioSincronizacionController {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaListaParametricas.getListaCodigos();
     }
-    @RequestMapping(value="/parametricaTipoMetodoPago", method= RequestMethod.GET)
+    @RequestMapping(value="/parametricaTipoMetodoPago", method= RequestMethod.POST)
     public List<ParametricasDto> parametricaTipoMetodoPago(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacionSincronizacion parametricaTipoMetodoPago = getServicioFacturacionSincronizacion();
@@ -393,8 +418,10 @@ public class ServicioSincronizacionController {
         solicitudSincronizacion.setNit(((Number) data.get("nit")).longValue());
         solicitudSincronizacion.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudSincronizacion.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudSincronizacion.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
-        solicitudSincronizacion.setCuis(cuisService.findCuis().get(0).getCuis());
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(new QName("codigoPuntoVenta"), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudSincronizacion.setCodigoPuntoVenta(codigoPuntoVenta);
+        solicitudSincronizacion.setCuis((String) data.get("cuis"));
         Client client = ClientProxy.getClient(parametricaTipoMetodoPago);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -409,7 +436,7 @@ public class ServicioSincronizacionController {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaListaParametricas.getListaCodigos();
     }
-    @RequestMapping(value="/parametricaTipoMoneda", method= RequestMethod.GET)
+    @RequestMapping(value="/parametricaTipoMoneda", method= RequestMethod.POST)
     public List<ParametricasDto> parametricaTipoMoneda(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacionSincronizacion parametricaTipoMoneda = getServicioFacturacionSincronizacion();
@@ -419,8 +446,10 @@ public class ServicioSincronizacionController {
         solicitudSincronizacion.setNit(((Number) data.get("nit")).longValue());
         solicitudSincronizacion.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudSincronizacion.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudSincronizacion.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
-        solicitudSincronizacion.setCuis(cuisService.findCuis().get(0).getCuis());
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(new QName("codigoPuntoVenta"), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudSincronizacion.setCodigoPuntoVenta(codigoPuntoVenta);
+        solicitudSincronizacion.setCuis((String) data.get("cuis"));
         Client client = ClientProxy.getClient(parametricaTipoMoneda);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -435,7 +464,7 @@ public class ServicioSincronizacionController {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaListaParametricas.getListaCodigos();
     }
-    @RequestMapping(value="/parametricaTipoPuntoVenta", method= RequestMethod.GET)
+    @RequestMapping(value="/parametricaTipoPuntoVenta", method= RequestMethod.POST)
     public List<ParametricasDto> parametricaTipoPuntoVenta(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacionSincronizacion parametricaTipoPuntoVenta = getServicioFacturacionSincronizacion();
@@ -445,8 +474,10 @@ public class ServicioSincronizacionController {
         solicitudSincronizacion.setNit(((Number) data.get("nit")).longValue());
         solicitudSincronizacion.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudSincronizacion.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudSincronizacion.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
-        solicitudSincronizacion.setCuis(cuisService.findCuis().get(0).getCuis());
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(new QName("codigoPuntoVenta"), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudSincronizacion.setCodigoPuntoVenta(codigoPuntoVenta);
+        solicitudSincronizacion.setCuis((String) data.get("cuis"));
         Client client = ClientProxy.getClient(parametricaTipoPuntoVenta);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -461,7 +492,7 @@ public class ServicioSincronizacionController {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaListaParametricas.getListaCodigos();
     }
-    @RequestMapping(value="/parametricaTiposFactura", method= RequestMethod.GET)
+    @RequestMapping(value="/parametricaTiposFactura", method= RequestMethod.POST)
     public List<ParametricasDto> parametricaTiposFactura(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacionSincronizacion parametricaTiposFactura = getServicioFacturacionSincronizacion();
@@ -471,8 +502,10 @@ public class ServicioSincronizacionController {
         solicitudSincronizacion.setNit(((Number) data.get("nit")).longValue());
         solicitudSincronizacion.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudSincronizacion.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudSincronizacion.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
-        solicitudSincronizacion.setCuis(cuisService.findCuis().get(0).getCuis());
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(new QName("codigoPuntoVenta"), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudSincronizacion.setCodigoPuntoVenta(codigoPuntoVenta);
+        solicitudSincronizacion.setCuis((String) data.get("cuis"));
         Client client = ClientProxy.getClient(parametricaTiposFactura);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -487,7 +520,7 @@ public class ServicioSincronizacionController {
         ModelAndView mv = new ModelAndView("index.html");
         return respuestaListaParametricas.getListaCodigos();
     }
-    @RequestMapping(value="/parametricaUnidadMedida", method= RequestMethod.GET)
+    @RequestMapping(value="/parametricaUnidadMedida", method= RequestMethod.POST)
     public List<ParametricasDto> parametricaUnidadMedida(@RequestBody Map<String, Object> data) throws IOException, JSONException {
 
         ServicioFacturacionSincronizacion parametricaUnidadMedida = getServicioFacturacionSincronizacion();
@@ -497,8 +530,10 @@ public class ServicioSincronizacionController {
         solicitudSincronizacion.setNit(((Number) data.get("nit")).longValue());
         solicitudSincronizacion.setCodigoSistema((String) data.get("codigoSistema"));
         solicitudSincronizacion.setCodigoSucursal((Integer) data.get("codigoSucursal"));
-        solicitudSincronizacion.setCodigoPuntoVenta((JAXBElement<Integer>) data.get("codigoPuntoVenta"));
-        solicitudSincronizacion.setCuis(cuisService.findCuis().get(0).getCuis());
+        JAXBElement<Integer> codigoPuntoVenta =  new JAXBElement(new QName("codigoPuntoVenta"), Integer.class, null);
+        codigoPuntoVenta.setValue((Integer) data.get("codigoPuntoVenta"));
+        solicitudSincronizacion.setCodigoPuntoVenta(codigoPuntoVenta);
+        solicitudSincronizacion.setCuis((String) data.get("cuis"));
         Client client = ClientProxy.getClient(parametricaUnidadMedida);
         Map<String, List<String>> headers = new HashMap<String, List<String>>();
         headers.put("Authorization", Arrays.asList("Token " + tokenService.findToken().get(0).getTokenUsuario()));
@@ -517,11 +552,11 @@ public class ServicioSincronizacionController {
     private ServicioFacturacionSincronizacion getServicioFacturacionSincronizacion() {
         ClientProxyFactoryBean factory = new JaxWsProxyFactoryBean();
         factory.setServiceClass(ServicioFacturacionSincronizacion.class);
-        factory.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/ServicioFacturacionNotaCreditoDebito?wsdl");
+        factory.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/FacturacionSincronizacion?wsdl");
         return (ServicioFacturacionSincronizacion) factory.create();
     }
 
-    @RequestMapping(value="/verificarComunicacion", method= RequestMethod.GET)
+    @RequestMapping(value="/verificarComunicacion", method= RequestMethod.POST)
     public int verificarComunicacion() throws IOException, JSONException {
         int comunicacion=0;
         ServicioFacturacionSincronizacion verificarComunicacion = getServicioFacturacionSincronizacion();

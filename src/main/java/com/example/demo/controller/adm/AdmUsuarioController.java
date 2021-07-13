@@ -7,30 +7,24 @@ package com.example.demo.controller.adm;
 
 
 import com.example.demo.model.TokenModel;
-import com.example.demo.operaciones.ServicioFacturacionCodigos;
-
-import java.io.IOException;
-
-import java.sql.Timestamp;
-import java.util.*;
-
-import com.example.demo.operaciones.VerificarComunicacionResponse;
 import com.example.demo.service.TokenService;
-import com.example.demo.wsdl.*;
-import org.apache.cxf.endpoint.Client;
-import org.apache.cxf.frontend.ClientProxy;
+import com.example.demo.wsdl.DatosUsuarioRequest;
+import com.example.demo.wsdl.ServicioAutenticacionSoap;
+import com.example.demo.wsdl.StrMensajeAplicacionDto;
 import org.apache.cxf.frontend.ClientProxyFactoryBean;
-import org.apache.cxf.interceptor.LoggingInInterceptor;
-import org.apache.cxf.interceptor.LoggingOutInterceptor;
 import org.apache.cxf.jaxws.JaxWsProxyFactoryBean;
-import org.apache.cxf.message.Message;
-
-import org.json.JSONException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.sql.Timestamp;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -47,7 +41,7 @@ public class AdmUsuarioController {
 
     private int ver=0;
 
-    @RequestMapping(value="/authenticate", method= RequestMethod.GET)
+    @RequestMapping(value="/authenticate", method= RequestMethod.POST)
     public String index(@RequestBody Map<String, Object> data) throws Exception {
         if(!tokenService.findToken().isEmpty()) {
             TokenModel tokenModel=tokenService.findToken().get(0);
@@ -55,17 +49,18 @@ public class AdmUsuarioController {
             Date date = new Date();
             long time = date.getTime();
             Timestamp ts = new Timestamp(time);
-            if ((tokenModel.getDateCreated().getTime() - ts.getTime()) > fourHours) {
+            if ((ts.getTime()-tokenModel.getDateCreated().getTime()) > fourHours) {
                 ClientProxyFactoryBean factoryToken = new JaxWsProxyFactoryBean();
                 factoryToken.setServiceClass(ServicioAutenticacionSoap.class);
                 factoryToken.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/ServicioAutenticacionSoap?wsdl");
                 ServicioAutenticacionSoap service = (ServicioAutenticacionSoap) factoryToken.create();
                 DatosUsuarioRequest datosUsuarioRequest = new DatosUsuarioRequest();
-                datosUsuarioRequest.setNit((long) data.get("nit"));
+                datosUsuarioRequest.setNit(((Number) data.get("nit")).longValue());
                 datosUsuarioRequest.setLogin((String) data.get("login"));
                 datosUsuarioRequest.setPassword((String) data.get("password"));
                 if (service.token(datosUsuarioRequest).isOk()) {
                     tokenModel.setTokenUsuario(service.token(datosUsuarioRequest).getToken());
+                    tokenModel.setDateCreated(ts);
                     tokenService.updateToken(tokenModel);
                 } else {
                     List<StrMensajeAplicacionDto> lista = service.token(datosUsuarioRequest).getMensajes();
@@ -85,7 +80,7 @@ public class AdmUsuarioController {
             factoryToken.setAddress("https://pilotosiatservicios.impuestos.gob.bo/v1/ServicioAutenticacionSoap?wsdl");
             ServicioAutenticacionSoap service = (ServicioAutenticacionSoap) factoryToken.create();
             DatosUsuarioRequest datosUsuarioRequest = new DatosUsuarioRequest();
-            datosUsuarioRequest.setNit((long) data.get("nit"));
+            datosUsuarioRequest.setNit(((Number) data.get("nit")).longValue());
             datosUsuarioRequest.setLogin((String) data.get("login"));
             datosUsuarioRequest.setPassword((String) data.get("password"));
             if (service.token(datosUsuarioRequest).isOk()) {
